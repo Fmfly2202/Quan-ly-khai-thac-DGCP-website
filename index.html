@@ -231,10 +231,10 @@
 
 		// 6. Cấu hình Thông số Điện (Sheet Daily: E7-E10)
         const ELEC_CONFIG = [
-            { label: "Tổng ngày (E7)", key: "total_day", rowIndex: 6, colIndex: 4, unit: "kWh" }, // Dòng 7, Cột E
-            { label: "KPD/GNR (E8)", key: "kpd", rowIndex: 7, colIndex: 4, unit: "kWh" },         // Dòng 8, Cột E
-            { label: "Booster (E9)", key: "booster", rowIndex: 8, colIndex: 4, unit: "kWh" },     // Dòng 9, Cột E
-            { label: "RP3 (E10)", key: "rp3", rowIndex: 9, colIndex: 4, unit: "kWh" },             // Dòng 10, Cột E
+            { label: "Tổng ngày", key: "total_day", rowIndex: 6, colIndex: 4, unit: "kWh" }, // Dòng 7, Cột E
+            { label: "GNR", key: "kpd", rowIndex: 7, colIndex: 4, unit: "kWh" },         // Dòng 8, Cột E
+            { label: "Booster", key: "booster", rowIndex: 8, colIndex: 4, unit: "kWh" },     // Dòng 9, Cột E
+            { label: "RP3 ", key: "rp3", rowIndex: 9, colIndex: 4, unit: "kWh" },             // Dòng 10, Cột E
 			{ label: "Thời gian chạy", key: "run_hours", unit: "Giờ", defaultValue: "24" } 
         
         ];
@@ -453,8 +453,7 @@
             </div>
         );
 
-        // --- Main App Component ---
-	// --- NEW COMPONENT V6: Tooltip Tương tác (Instant Hover) ---
+        // --- Main App Component ---	
         const SimpleChart = ({ data, planGas, planBCP, month }) => {
             // State để lưu thông tin điểm đang được di chuột vào
             const [hoveredPoint, setHoveredPoint] = React.useState(null);
@@ -758,8 +757,29 @@
             const [showAnnualMaintModal, setShowAnnualMaintModal] = useState(false);
 			const [yearFilterEq, setYearFilterEq] = useState('ALL');   // Lọc Thiết bị
             const [yearFilterSt, setYearFilterSt] = useState('ALL');   // Lọc Trạng thái
+			
+			// --- STATE CHO BẢNG BÁO CÁO SỰ CỐ NĂM ---
+			const [showAnnualShutdownModal, setShowAnnualShutdownModal] = useState(false);
+			const [shutdownReportPeriod, setShutdownReportPeriod] = useState('YEAR'); // Mặc định xem cả năm
+			
+			// --- STATE CHO BẢNG BÁO CÁO SỰ KIỆN NĂM ---
+			const [showAnnualEventModal, setShowAnnualEventModal] = useState(false);
+			const [eventReportPeriod, setEventReportPeriod] = useState('YEAR'); // Mặc định xem cả năm
 
-            // 👇 ĐOẠN CODE QUAN TRỌNG ĐÃ SỬA:
+			// Hàm logic xác định trạng thái dựa trên mốc thời gian thực tế
+			const autoDetermineStatus = (startTime, endTime, isIncident = false) => {
+				if (!startTime || startTime === "") {
+					return isIncident ? "Chưa khắc phục" : "Chưa thực hiện"; // Trạng thái ban đầu
+				}
+				if (startTime && (!endTime || endTime === "")) {
+					return isIncident ? "Đang xử lý" : "Đang thực hiện"; // Đang diễn ra
+				}
+				if (startTime && endTime) {
+					return isIncident ? "Đã khắc phục" : "Đã hoàn thành"; // Kết thúc
+				}
+				return "Chưa thực hiện";
+			};
+            
             // Tính toán bù giờ để luôn lấy đúng ngày hôm nay tại Việt Nam
             const [dailyDate, setDailyDate] = React.useState(() => {
                 const d = new Date();
@@ -767,7 +787,7 @@
                 return new Date(d.getTime() - offset).toISOString().slice(0, 10);
             });
 			
-			// --- FIX LỖI: LUÔN CUỘN LÊN ĐẦU TRANG KHI MỞ APP HOẶC ĐỔI TAB ---
+			// LUÔN CUỘN LÊN ĐẦU TRANG KHI MỞ APP HOẶC ĐỔI TAB ---
             useEffect(() => {
                 // 1. Tắt tính năng tự nhớ vị trí của trình duyệt
                 if ('scrollRestoration' in window.history) {
@@ -889,7 +909,7 @@
 
 			];
 
-            // --- HÀM MỚI: ĐỌC FILE SVODKA ĐỂ PREVIEW (CHƯA LƯU) ---
+            // --- HÀM ĐỌC FILE SVODKA ĐỂ PREVIEW (CHƯA LƯU) ---
 			const handleSvodkaPlanUpload = (e) => {
 				const file = e.target.files[0];
 				if (!file) return;
@@ -956,7 +976,7 @@
 				reader.readAsArrayBuffer(file);
 			};
 						
-			// --- HÀM SIÊU IMPORT v2.2: FIX DUPLICATE + LAZY LOAD XLSX ---
+			// --- HÀM IMPORT SVODKA v2.2: FIX DUPLICATE + LAZY LOAD XLSX ---
             const handleImportFullHistory = async (e) => { // 1. Thêm async
                 const file = e.target.files[0];
                 if (!file) return;
@@ -1121,7 +1141,7 @@
                 e.target.value = null; 
             };
 			
-			// --- 1. CẤU HÌNH CHO FILE SVODKA (ĐÃ CHỈNH THEO FILE BẠN GỬI) ---
+			// --- HÀM CẤU HÌNH CHO FILE SVODKA (ĐÃ CHỈNH THEO FILE BẠN GỬI) ---
 			const SVODKA_CONFIG = {
 				SHEET_NAME: "Detail", 
 				ROW_DATA_START: 7,    // Dữ liệu bắt đầu từ dòng 8 (index 7)
@@ -2094,7 +2114,23 @@
                 setEditingShutdownId(null);
                 setIsEditingShutdown(true);
             };
-            const handleAddShutdownDirectly = () => { handleStartEditShutdownSection(); };
+            // --- HÀM MỞ BẢNG THÊM MỚI SỰ CỐ (ĐỒNG BỘ VỚI CHI TIẾT) ---
+			const handleAddShutdownDirectly = () => {
+				const now = new Date().toISOString().slice(0, 16);
+				setShutdownDetail({
+					id: null, // null để hệ thống hiểu là thêm mới
+					description: '',
+					equipment: '',
+					performingUnit: 'DGCP',
+					relatedPlatforms: '',
+					eventType: 'Sự cố',
+					start: now,
+					end: '',
+					cause: '',
+					info: '',
+					status: 'Chưa khắc phục'
+				});
+			};
 
             const handleAddOrUpdateShutdown = () => {
                 // ... (Giữ nguyên logic kiểm tra input cũ) ...
@@ -2190,7 +2226,22 @@
             };
 
             const handleStartEditEventSection = () => { setTempEvents(currentSharedData?.events || []); setNewEvent({ name: '', startDate: '', endDate: '', info: '', status: 'Chưa thực hiện', performingUnit: '', relatedPlatforms: '', eventType: 'Khác', equipment: '' }); setEditingEventId(null); setIsEditingEvent(true); };
-            const handleAddEventDirectly = () => { handleStartEditEventSection(); };
+            
+			// --- HÀM MỞ BẢNG THÊM MỚI SỰ KIỆN (ĐỒNG BỘ VỚI BẢNG CHI TIẾT) ---
+            const handleAddEventDirectly = () => {
+                const now = new Date().toISOString().slice(0, 16);
+                setEventDetail({
+                    id: null, // null để hệ thống hiểu là thêm mới
+                    name: '',
+                    startDate: now,
+                    endDate: '',
+                    info: '',
+                    status: 'Chưa thực hiện',
+                    eventType: 'Khác',
+                    equipment: '',
+                    relatedPlatforms: ''
+                });
+            };
             const handleAddOrUpdateEvent = () => {
                 if (!newEvent.name) return alert("Vui lòng nhập tên sự kiện/nội dung.");
 
@@ -2400,111 +2451,16 @@
             };
 			
             const closeMaintDetail = () => setMaintDetail(null);
-            const saveMaintDetail = () => {
-				if (!maintDetail.description) return alert("Vui lòng nhập mô tả");
-
-				// Chuẩn bị dữ liệu để lưu
-				const updatedPlan = {
-					...maintDetail,
-					// Đảm bảo các giá trị giờ là số (number)
-					plannedHours: parseFloat(maintDetail.plannedHours || 0),
-					actualHours: parseFloat(maintDetail.actualHours || 0),
-					// Lưu các mốc thời gian mới
-					plannedStart: maintDetail.plannedStart || maintDetail.start,
-					plannedEnd: maintDetail.plannedEnd || maintDetail.end,
-					updatedAt: new Date().toISOString()
-				};
-
-			// --- Logic lưu vào Database của bạn (Firebase hoặc LocalStorage) ---
-			const newDb = { ...db };
-				if (!newDb.SHARED) newDb.SHARED = {};
-				if (!newDb.SHARED[selectedMonth]) newDb.SHARED[selectedMonth] = { maintenancePlans: [], shutdownIncidents: [] };
-
-				const plans = newDb.SHARED[selectedMonth].maintenancePlans || [];
-				
-				if (maintDetail.isNew) {
-					plans.push({ ...updatedPlan, id: Date.now(), isNew: undefined });
-				} else {
-					const idx = plans.findIndex(p => p.id === maintDetail.id);
-					if (idx !== -1) plans[idx] = updatedPlan;
-				}
-
-				newDb.SHARED[selectedMonth].maintenancePlans = plans;
-				setDb(newDb); // Cập nhật state tổng
-				closeMaintDetail(); // Đóng modal
-			};
-			// Hàm helper tính số giờ giữa 2 mốc thời gian
-			const autoCalculateHours = (startStr, endStr) => {
-				if (!startStr || !endStr) return 0;
-				const start = new Date(startStr);
-				const end = new Date(endStr);
-				const diffInMs = end - start;
-				if (diffInMs < 0) return 0; // Tránh trường hợp ngày kết thúc nhỏ hơn ngày bắt đầu
-				return (diffInMs / (1000 * 60 * 60)).toFixed(1); // Trả về số giờ, làm tròn 1 chữ số thập phân
-			};
+            
 			
-            // Delete Kế hoạch trong bảng chi tiết Modal (still needed if double click)
-            const deleteMaintFromDetail = (id) => {
-				// Tìm item để lấy tên hiển thị trong thông báo xác nhận
-				const itemToDelete = currentSharedData.maintenancePlans.find(p => p.id === id);
-				
-				if (window.confirm(`Xác nhận HỦY/XÓA đợt bảo dưỡng: ${itemToDelete?.description}?`)) {
-					// Sao lưu DB trước khi xóa để có thể Undo nếu cần
-					setBackupDb(JSON.parse(JSON.stringify(db)));
-
-					// Ghi Log lên hệ thống
-					logToCloud(currentUser, `HỦY/XÓA Bảo dưỡng: ${itemToDelete?.description}`);
-
-					// Thực hiện lọc bỏ item khỏi danh sách
-					const updatedPlans = currentSharedData.maintenancePlans.filter(item => item.id !== id);
-					
-					// Cập nhật Database dùng chung
-					updateSharedMonthData(selectedMonth, 'maintenancePlans', updatedPlans);
-					
-					// QUAN TRỌNG: Đóng Modal ngay sau khi xóa thành công
-					setMaintDetail(null); 
-				}
-			};
 
             const openShutdownDetail = (plan) => {
                 setShutdownDetail({ ...plan, start: ensureDateTimeFormat(plan.start), end: ensureDateTimeFormat(plan.end || ''), equipment: plan.equipment || '', cause: plan.cause || '', eventType: plan.eventType || 'Sự cố', status: plan.status || 'Chưa khắc phục' });
             };
             const closeShutdownDetail = () => setShutdownDetail(null);
-            const saveShutdownDetail = () => {
-                const updatedPlan = { ...shutdownDetail };
-                
-                // Kiểm tra logic thời gian
-                if (updatedPlan.status === 'Đã khắc phục' && !updatedPlan.end) return alert("Cần nhập thời gian kết thúc để xác nhận đã khắc phục.");
-                
-                let days = 0;
-                if (updatedPlan.end) { 
-                    days = calculateDateDiff(updatedPlan.start, updatedPlan.end); 
-                    if (days <= 0) return alert("Thời gian kết thúc phải sau thời gian bắt đầu."); 
-                } else { 
-                    const diff = new Date() - new Date(updatedPlan.start); 
-                    days = Math.max(1, Math.ceil(diff/(1000*60*60*24))); 
-                }
+            
+			
 
-                if (window.confirm("Lưu các thay đổi chi tiết cho sự cố này?")) {
-                    setBackupDb(JSON.parse(JSON.stringify(db)));
-
-                    // --- GHI LOG CHI TIẾT ---
-                    const logMsg = `Sửa chi tiết Sự cố: ${updatedPlan.equipment || 'N/A'} - ${updatedPlan.description} ` +
-                                   `(${formatDate(updatedPlan.start)} ${updatedPlan.end ? 'đến ' + formatDate(updatedPlan.end) : '(Đang diễn ra)'}) ` +
-                                   `[Loại: ${updatedPlan.eventType}] [Trạng thái: ${updatedPlan.status}]`;
-                    
-                    logToCloud(currentUser, logMsg);
-                    // ------------------------
-
-                    // Cập nhật dữ liệu vào DB
-                    const updatedList = currentSharedData.shutdownIncidents.map(i => 
-                        i.id === updatedPlan.id ? { ...i, ...updatedPlan, days } : i
-                    );
-                    
-                    updateSharedMonthData(selectedMonth, 'shutdownIncidents', updatedList);
-                    closeShutdownDetail();
-                }
-            };
             // --- HÀM XÓA SỰ CỐ TỪ TRONG MODAL CHI TIẾT ---
             const deleteShutdownFromDetail = () => {
                 // 1. Lấy dữ liệu từ state đang mở trong Modal
@@ -2539,27 +2495,191 @@
 			};
 			
             const closeEventDetail = () => setEventDetail(null);
-            // 1. HÀM LƯU CHI TIẾT SỰ KIỆN (CÓ LOG)
-            const saveEventDetail = () => {
-                const updatedEvent = { ...eventDetail };
-                if (!updatedEvent.name) return alert("Vui lòng nhập tên sự kiện.");
+            
+			// 2. HÀM LƯU KẾ HOẠCH BẢO DƯỠNG
+			const saveMaintDetail = () => {
+				if (!maintDetail.description) return alert("Vui lòng nhập mô tả công việc");
 
-                if(window.confirm("Lưu thay đổi chi tiết cho sự kiện này?")) {
-                    setBackupDb(JSON.parse(JSON.stringify(db)));
+				// 1. Chuẩn bị dữ liệu và tự động ép trạng thái theo thời gian thực tế
+				const updatedPlan = {
+					...maintDetail,
+					plannedHours: parseFloat(maintDetail.plannedHours || 0),
+					// Tự động tính số giờ thực tế dựa trên start/end thực tế trước khi lưu
+					actualHours: parseFloat(autoCalculateHours(maintDetail.start, maintDetail.end)),
+					plannedStart: maintDetail.plannedStart || maintDetail.start,
+					plannedEnd: maintDetail.plannedEnd || maintDetail.end,
+					// Ép trạng thái theo thời gian thực tế (Chưa thực hiện/Đang thực hiện/Đã hoàn thành)
+					status: autoDetermineStatus(maintDetail.start, maintDetail.end),
+					updatedAt: new Date().toISOString()
+				};
 
-                    // --- GHI LOG CHI TIẾT ---
-                    const logMsg = `Sửa chi tiết Sự kiện: ${updatedEvent.name} ` +
-                                   `(${formatDate(updatedEvent.startDate)}${updatedEvent.endDate ? ' đến ' + formatDate(updatedEvent.endDate) : ''}) ` +
-                                   `[Loại: ${updatedEvent.eventType}] [Trạng thái: ${updatedEvent.status}]`;
-                    
-                    logToCloud(currentUser, logMsg);
-                    // ------------------------
+				const confirmMsg = updatedPlan.isNew 
+					? "Xác nhận thêm mới kế hoạch bảo dưỡng?" 
+					: "Xác nhận cập nhật và ĐỒNG BỘ trạng thái công việc này cho tất cả các tháng liên quan?";
 
-                    const updated = currentSharedData.events.map(i => i.id === updatedEvent.id ? { ...i, ...updatedEvent } : i);
-                    updateSharedMonthData(selectedMonth, 'events', updated);
-                    closeEventDetail();
-                }
-            };
+				if (window.confirm(confirmMsg)) {
+					setBackupDb(JSON.parse(JSON.stringify(db)));
+
+					setDb(prev => {
+						const newDb = { ...prev };
+						const targetDesc = updatedPlan.description;
+						const targetEquip = updatedPlan.maintenanceEquipment;
+
+						// --- LOGIC: ĐỒNG BỘ XUYÊN THÁNG ---
+						// Duyệt qua 12 tháng để tìm các bản sao của công việc này (tạo ra do chuyển tồn đọng)
+						for (let m = 1; m <= 12; m++) {
+							if (newDb.SHARED[m] && newDb.SHARED[m].maintenancePlans) {
+								newDb.SHARED[m].maintenancePlans = newDb.SHARED[m].maintenancePlans.map(item => {
+									// Nếu trùng Mô tả và Thiết bị dừng (định danh công việc kéo dài)
+									if (item.description === targetDesc && item.maintenanceEquipment === targetEquip) {
+										return { 
+											...item, 
+											start: updatedPlan.start,   // Đồng bộ ngày bắt đầu thực tế
+											end: updatedPlan.end,       // Đồng bộ ngày kết thúc thực tế
+											status: updatedPlan.status, // Đồng bộ trạng thái
+											actualHours: updatedPlan.actualHours,
+											performingUnit: updatedPlan.performingUnit,
+											info: updatedPlan.info
+										};
+									}
+									return item;
+								});
+							}
+						}
+
+						// --- LOGIC: XỬ LÝ THÊM MỚI (Nếu là record mới hoàn toàn) ---
+						if (updatedPlan.isNew) {
+							const newId = Date.now();
+							const cleanPlan = { ...updatedPlan, id: newId, isNew: undefined };
+							
+							if (!newDb.SHARED[selectedMonth]) {
+								newDb.SHARED[selectedMonth] = { maintenancePlans: [], shutdownIncidents: [], events: [] };
+							}
+							
+							// Kiểm tra tránh trùng lặp trong chính tháng hiện tại
+							const exists = newDb.SHARED[selectedMonth].maintenancePlans.some(p => p.description === targetDesc);
+							if (!exists) {
+								newDb.SHARED[selectedMonth].maintenancePlans = [...newDb.SHARED[selectedMonth].maintenancePlans, cleanPlan];
+							}
+						}
+
+						return newDb;
+					});
+
+					logToCloud(currentUser, `${updatedPlan.isNew ? 'Thêm mới' : 'Cập nhật & Đồng bộ'} Bảo dưỡng: ${updatedPlan.description}`);
+					closeMaintDetail();
+					alert("✅ Dữ liệu đã được lưu và đồng bộ hóa thành công!");
+				}
+			};
+			
+			// 2. HÀM LƯU SỰ CỐ CHI TIẾT
+			const saveShutdownDetail = () => {
+				if (!shutdownDetail.description) return alert("Vui lòng nhập mô tả");
+
+				const updatedPlan = { ...shutdownDetail };
+				// 1. Tự động xác định trạng thái dựa trên thời gian thực tế
+				updatedPlan.status = autoDetermineStatus(updatedPlan.start, updatedPlan.end, true);
+
+				if (window.confirm(`Hệ thống sẽ cập nhật trạng thái [${updatedPlan.status.toUpperCase()}] cho sự cố này ở TẤT CẢ các tháng liên quan. Xác nhận?`)) {
+					setBackupDb(JSON.parse(JSON.stringify(db)));
+
+					setDb(prev => {
+						const newDb = { ...prev };
+						// Lấy nội dung và thiết bị để làm định danh tìm kiếm xuyên tháng
+						const targetDesc = updatedPlan.description;
+						const targetEquip = updatedPlan.equipment;
+
+						// 2. Vòng lặp quét qua tất cả 12 tháng trong Database
+						for (let m = 1; m <= 12; m++) {
+							if (newDb.SHARED[m] && newDb.SHARED[m].shutdownIncidents) {
+								newDb.SHARED[m].shutdownIncidents = newDb.SHARED[m].shutdownIncidents.map(item => {
+									// Nếu tìm thấy sự cố trùng Mô tả và Thiết bị ở bất kỳ tháng nào
+									if (item.description === targetDesc && item.equipment === targetEquip) {
+										return { 
+											...item, 
+											end: updatedPlan.end, // Cập nhật ngày kết thúc
+											status: updatedPlan.status, // Cập nhật trạng thái
+											info: updatedPlan.info, // Đồng bộ ghi chú
+											cause: updatedPlan.cause // Đồng bộ nguyên nhân
+										};
+									}
+									return item;
+								});
+							}
+						}
+						return newDb;
+					});
+
+					logToCloud(currentUser, `Đồng bộ sự cố xuyên tháng: ${updatedPlan.description}`);
+					closeShutdownDetail();
+					alert("✅ Đã đồng bộ trạng thái kết thúc cho các tháng liên quan!");
+				}
+			};
+			
+			// 3. HÀM LƯU CHI TIẾT SỰ KIỆN (ĐỒNG BỘ XUYÊN THÁNG & TỰ ĐỘNG TRẠNG THÁI)
+			const saveEventDetail = () => {
+				if (!eventDetail.name) return alert("Vui lòng nhập tên sự kiện.");
+
+				// 1. Tạo đối tượng cập nhật và tự động xác định trạng thái theo thời gian thực tế
+				const updatedEvent = { 
+					...eventDetail,
+					status: autoDetermineStatus(eventDetail.startDate, eventDetail.endDate)
+				};
+
+					const confirmMsg = updatedEvent.id 
+						? `Xác nhận cập nhật sự kiện này? (Hệ thống sẽ đồng bộ trạng thái kết thúc cho các tháng liên quan nếu có)`
+						: `Xác nhận thêm mới sự kiện này?`;
+
+					if (window.confirm(confirmMsg)) {
+						setBackupDb(JSON.parse(JSON.stringify(db)));
+
+						setDb(prev => {
+							const newDb = { ...prev };
+							const targetName = updatedEvent.name;
+							const targetEquip = updatedEvent.equipment;
+
+							// --- LOGIC 1: ĐỒNG BỘ XUYÊN THÁNG (Cho các sự kiện kéo dài) ---
+							// Duyệt qua tất cả 12 tháng để tìm các bản sao của sự kiện này
+							for (let m = 1; m <= 12; m++) {
+								if (newDb.SHARED[m] && newDb.SHARED[m].events) {
+									newDb.SHARED[m].events = newDb.SHARED[m].events.map(ev => {
+										// Nếu trùng tên và thiết bị (định danh sự kiện kéo dài)
+										if (ev.name === targetName && ev.equipment === targetEquip) {
+											return { 
+												...ev, 
+												endDate: updatedEvent.endDate, // Đồng bộ ngày kết thúc thực tế
+												status: updatedEvent.status,   // Đồng bộ trạng thái mới nhất
+												info: updatedEvent.info,       // Đồng bộ ghi chú
+												eventType: updatedEvent.eventType,
+												relatedPlatforms: updatedEvent.relatedPlatforms
+											};
+										}
+										return ev;
+									});
+								}
+							}
+
+							// --- LOGIC 2: XỬ LÝ THÊM MỚI VÀO THÁNG HIỆN TẠI ---
+							// Nếu là thêm mới (id === null), đối tượng chưa tồn tại trong mảng của tháng hiện tại sau lệnh map ở trên
+							if (updatedEvent.id === null) {
+								updatedEvent.id = Date.now(); // Tạo ID duy nhất
+								if (!newDb.SHARED[selectedMonth]) {
+									newDb.SHARED[selectedMonth] = { events: [], maintenancePlans: [], shutdownIncidents: [] };
+								}
+								newDb.SHARED[selectedMonth].events = [...newDb.SHARED[selectedMonth].events, updatedEvent];
+							}
+
+							return newDb;
+						});
+
+						// 3. Ghi log và đóng Modal
+						const logAction = updatedEvent.id ? "Cập nhật" : "Thêm mới";
+						logToCloud(currentUser, `${logAction} Sự kiện: ${updatedEvent.name} [Trạng thái: ${updatedEvent.status}]`);
+						
+						closeEventDetail();
+						alert("✅ Đã lưu và đồng bộ dữ liệu sự kiện thành công!");
+					}
+				};
 
             // 2. HÀM XÓA SỰ KIỆN TỪ MODAL (CÓ LOG)
             const deleteEventFromDetail = () => {
@@ -3563,10 +3683,10 @@
             // --- USER & PERMISSIONS ---
             
 				// 1. Điền tên 'Admin' vào đây để vào thẳng với quyền cao nhất, khi muốn bật lại chế độ bảo mật, bạn chỉ cần sửa lại thành null
-				const [currentUser, setCurrentUser] = useState('Admin'); 
+				const [currentUser, setCurrentUser] = useState('null'); 
 				
 				// 2. Đổi thành false để ẩn bảng đăng nhập đi, khi muốn bật lại chế độ bảo mật, bạn chỉ cần sửa lại thành null và true
-				const [showLoginModal, setShowLoginModal] = useState(false); 
+				const [showLoginModal, setShowLoginModal] = useState(true); 
             
             // DANH SÁCH TÀI KHOẢN ĐƯỢC PHÉP SỬA & LƯU (ADMIN)
             // Bạn hãy liệt kê tất cả tên đồng nghiệp vào đây:
@@ -4465,7 +4585,7 @@
                                     </div>
 
                                     {!isEditingMaint ? (
-                                        /* CHẾ ĐỘ XEM DANH SÁCH */
+                                        /* DANH SÁCH KẾ HOẠCH BẢO DƯỠNG*/
                                         <div>
                                             <div className="mb-2 flex justify-between items-center">
                                                 {ADMIN_USERS.includes(currentUser) && (
@@ -4513,7 +4633,7 @@
                                                                 </div>
                                                             </div>
 
-                                                            {/* Hàng 2: Thời gian (Đã sửa lỗi xuống dòng) */}
+                                                            {/* Hàng 2: Thời gian */}
                                                             <div className="text-xs text-gray-500 mt-2 space-y-1">
                                                                 {!plan.isUnplanned && (
                                                                     <div className="flex items-center gap-2 bg-slate-50 p-1 rounded border border-slate-100">
@@ -4579,305 +4699,300 @@
                                     )}
                                 </Card>
 
-                                    {/* CARD SỰ CỐ DỪNG MÁY  */}
-                                    <Card className="p-5">
-                                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-                                            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">Sự cố dừng máy</h3>
-                                            {isEditingShutdown && <button onClick={()=>setIsEditingShutdown(false)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Hủy</button>}
-                                        </div>
-                                        {!isEditingShutdown ? (
-                                            <div>
-                                                <div className="mb-2">
-                                                {/* CHỈ HIỆN NÚT NẾU LÀ ADMIN */}
-                                                {ADMIN_USERS.includes(currentUser) && (
-                                                    <button onClick={handleAddShutdownDirectly} className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors font-medium">
-                                                        Thêm sự cố
-                                                    </button>
-                                                )}
-                                            </div>
-                                                <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
-                                                    {(currentSharedData.shutdownIncidents || []).length === 0 && <p className="text-xs text-gray-400 italic text-center py-2">Không có sự cố</p>}
-                                                    {(currentSharedData.shutdownIncidents || []).map(plan => (
-                                                        <div key={plan.id} className="text-sm bg-red-50 p-3 rounded border border-red-200 flex flex-col gap-2 cursor-pointer hover:bg-red-100 transition-colors border-l-4 border-l-red-500 shadow-sm" onDoubleClick={() => openShutdownDetail(plan)} title="Nhấp đúp để xem/sửa chi tiết">
-                                                            
-                                                            {/* 1. TIÊU ĐỀ & TỔNG GIỜ */}
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="font-bold text-gray-800 text-sm">{plan.description}</div>
-                                                                <div className="text-xs font-bold text-red-700 bg-white px-2 py-0.5 rounded border border-red-100 shadow-sm whitespace-nowrap ml-2">
-                                                                    {calculateHoursDiff(plan.start, plan.status === 'Đã khắc phục' ? plan.end : null).toFixed(2)} giờ
-                                                                </div>
-                                                            </div>
+                                    {/* CARD SỰ CỐ DỪNG MÁY (GIAO DIỆN MỚI - ĐỒNG BỘ) */}
+								<Card className="p-5">
+									<div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+										<h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">Sự cố dừng máy</h3>
+										{/* --- NÚT BÁO CÁO SỰ CỐ (MỚI) --- */}
+										<button 
+											onClick={() => setShowAnnualShutdownModal(true)}
+											className="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 rounded hover:bg-rose-100 transition-colors flex items-center gap-1 font-bold"
+											title="Xem bảng tổng hợp sự cố cả năm"
+										>
+											<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+											Báo cáo sự cố
+										</button>
+										{/* Nút Hủy (nếu bạn vẫn dùng mode sửa nhanh) */}
+										{isEditingShutdown && (
+											<button onClick={()=>setIsEditingShutdown(false)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Hủy</button>
+										)}
+										
+									</div>
 
-                                                            {/* 2. THỜI GIAN */}
-                                                            <div className="text-xs text-gray-600 flex items-center gap-1">
-                                                                {formatDate(plan.start)}
-                                                                {plan.status === 'Đã khắc phục' && plan.end 
-                                                                    ? <><span className="text-gray-400 mx-1">➔</span>{formatDate(plan.end)}</>
-                                                                    : <span className="text-red-600 font-bold italic ml-1 animate-pulse">(Đang diễn ra...)</span>
-                                                                } 
-                                                            </div>                                                            
+									{!isEditingShutdown ? (
+										<div>
+											{/* Header phụ: Nút thêm mới */}
+											<div className="mb-2">
+												{ADMIN_USERS.includes(currentUser) && (
+													<button 
+														onClick={handleAddShutdownDirectly} 
+														className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors font-medium border border-red-200"
+													>
+														+ Thêm sự cố
+													</button>
+												)}
+											</div>
+											
+											<div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
+												{(currentSharedData.shutdownIncidents || []).length === 0 && (
+													<p className="text-xs text-gray-400 italic text-center py-2">Không có sự cố ghi nhận</p>
+												)}
+												
+												{(currentSharedData.shutdownIncidents || []).map(plan => {
+													const hours = calculateHoursDiff(plan.start, plan.end);
+													const isProcessing = !plan.end || plan.status !== 'Đã khắc phục';
 
-                                                            {/* 4. TAGS THÔNG TIN */}
-                                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                                <span className="inline-block text-[10px] px-1.5 py-0.5 bg-white border border-gray-300 text-gray-600 rounded shadow-sm font-medium">
-                                                                    {plan.eventType || 'Sự cố'}
-                                                                </span>
-                                                                
-                                                                {plan.equipment && (
-                                                                    <span className="inline-block text-[10px] px-1.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded shadow-sm font-medium">
-                                                                        {plan.equipment}
-                                                                    </span>
-                                                                )}
-                                                                
-                                                                <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded border shadow-sm font-bold ${
-                                                                    plan.status === 'Đã khắc phục' 
-                                                                    ? 'bg-green-100 text-green-700 border-green-200' 
-                                                                    : 'bg-red-100 text-red-700 border-red-200'
-                                                                }`}>
-                                                                    {plan.status || 'Chưa khắc phục'}
-                                                                </span>
-                                                            </div>
+													return (
+														<div key={plan.id} className="text-sm bg-gray-50 p-3 rounded border border-gray-200 cursor-pointer hover:bg-red-50 transition-colors flex flex-col gap-1 group" onDoubleClick={() => openShutdownDetail(plan)}>
 															
-															{/* 3. GHI CHÚ CHI TIẾT (MỚI THÊM) */}
-                                                            {plan.info && (
-                                                                <div className="text-xs text-gray-700 bg-white p-2 rounded border border-red-100 italic">
-                                                                    <span className="font-semibold text-red-400 not-italic mr-1">Ghi chú:</span>
-                                                                    {plan.info}
-                                                                </div>
-                                                            )}
-															
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <div className="border p-2 bg-red-50 rounded text-sm mb-2 border-red-200">
-                                                    <div className="font-bold text-xs mb-1 text-red-800">{editingShutdownId ? "Sửa sự cố:" : "Thêm mới:"}</div>
-                                                    <input placeholder="Mô tả sự cố" className="w-full border p-1 mb-1" value={newShutdown.description} onChange={e=>setNewShutdown({...newShutdown, description: e.target.value})}/>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-1">Thiết bị bị sự cố</label>
-                                                        <select 
-                                                            className="w-full border p-1 text-xs bg-white rounded"
-                                                            value={newShutdown.equipment}
-                                                            onChange={e => setNewShutdown({...newShutdown, equipment: e.target.value})}
-                                                        >
-                                                            <option value="">-- Chọn thiết bị --</option>
-                                                            {AFFECTED_EQUIPMENT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                        </select>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-1 mb-1">
-                                                        <div>
-                                                            <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Đơn vị quản lý</label>
-                                                            <input list="puShutdown" placeholder="Chọn/Nhập..." className="border p-1 text-xs w-full" value={newShutdown.performingUnit} onChange={e=>setNewShutdown({...newShutdown, performingUnit: e.target.value})}/><datalist id="puShutdown">{PERFORMING_UNITS.map(u=><option key={u} value={u}/>)}</datalist>
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Giàn liên quan</label>
-                                                            <input list="rpShutdown" placeholder="Chọn/Nhập..." className="border p-1 text-xs w-full" value={newShutdown.relatedPlatforms} onChange={e=>setNewShutdown({...newShutdown, relatedPlatforms: e.target.value})}/><datalist id="rpShutdown">{RELATED_PLATFORMS.map(p=><option key={p} value={p}/>)}</datalist>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-red-700 mb-1">Loại sự kiện</label>
-                                                        <select 
-                                                            className="w-full border p-1 text-xs bg-white rounded"
-                                                            value={newShutdown.eventType || 'Sự cố'}
-                                                            onChange={e => setNewShutdown({...newShutdown, eventType: e.target.value})}
-                                                        >
-                                                            <option value="Sự cố">Sự cố</option>
-                                                        </select>
-                                                    </div>
-
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-1">Thời gian sự cố (Giờ/Ngày/Tháng/Năm)</label>
-                                                        <div className="grid grid-cols-2 gap-1">
-                                                            <div>
-                                                                <label className="block text-[9px] text-gray-400 mb-0.5">Bắt đầu</label>
-                                                                <input type="datetime-local" className="border p-1 text-xs w-full" value={newShutdown.start} onChange={e=>setNewShutdown({...newShutdown, start: e.target.value})}/>
-                                                            </div>
-                                                            <div>
-                                                                <label className="block text-[9px] text-gray-400 mb-0.5">Kết thúc</label>
-                                                                <input type="datetime-local" className="border p-1 text-xs w-full" value={newShutdown.end} onChange={e=>setNewShutdown({...newShutdown, end: e.target.value})}/>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Nguyên nhân</label>
-                                                        <textarea placeholder="Nguyên nhân" className="w-full border p-1 text-xs h-16 mb-1 resize-none" value={newShutdown.cause} onChange={e=>setNewShutdown({...newShutdown, cause: e.target.value})}/>
-                                                    </div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Thông tin khác</label>
-                                                        <textarea placeholder="Thông tin khác" className="w-full border p-1 text-xs h-16" value={newShutdown.info} onChange={e=>setNewShutdown({...newShutdown, info: e.target.value})}/>
-                                                    </div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-1">Tình trạng khắc phục</label>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {SHUTDOWN_STATUS_OPTIONS.map(s => (
-                                                                <label key={s} className="text-[10px] flex items-center gap-1 bg-white px-1 border rounded cursor-pointer hover:bg-gray-50">
-                                                                    <input type="radio" name="shutdownSt" checked={newShutdown.status === s} onChange={() => setNewShutdown({ ...newShutdown, status: s })} />
-                                                                    {s}
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex gap-2 mt-2">
-                                                        <button onClick={handleAddOrUpdateShutdown} className="flex-1 bg-red-600 text-white py-1 rounded font-bold hover:bg-red-700">{editingShutdownId ? "Cập nhật" : "Thêm"}</button>
-                                                        {editingShutdownId && <button onClick={()=>handleDeleteShutdownItem(editingShutdownId)} className="bg-gray-100 text-gray-600 px-3 rounded text-xs font-bold hover:bg-gray-200">Xóa</button>}
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
-                                                    {(tempShutdowns || []).map(plan => (
-                                                        <div key={plan.id} className={`text-xs p-1 border rounded cursor-pointer ${editingShutdownId===plan.id ? 'bg-red-100 border-red-300' : 'bg-gray-50'}`} onClick={()=>handleStartEditShutdownItem(plan)}>
-                                                            <span className="font-semibold">{plan.description}</span> <span className="text-gray-500">({formatDate(plan.start)})</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </Card>
-
-                                    {/* CARD CÁC SỰ KIỆN KHÁC */}
-                                    <Card className="p-5">
-                                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-                                            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">Các sự kiện khác</h3>
-                                            {isEditingEvent && <button onClick={()=>setIsEditingEvent(false)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Hủy</button>}
-                                        </div>
-                                        {!isEditingEvent ? (
-                                            <div>
-                                                <div className="mb-2">
-                                                {/* CHỈ HIỆN NÚT NẾU LÀ ADMIN */}
-                                                {ADMIN_USERS.includes(currentUser) && (
-                                                    <button onClick={handleAddEventDirectly} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors font-medium">
-                                                        Thêm sự kiện
-                                                    </button>
-                                                )}
-                                            </div>
-                                                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                                                    {currentSharedData.events.map(ev => (
-                                                        <div key={ev.id} className="text-sm bg-yellow-50 p-3 rounded border border-yellow-200 flex flex-col gap-2 cursor-pointer hover:bg-yellow-100 transition-colors border-l-4 border-l-yellow-400 shadow-sm" onDoubleClick={()=>openEventDetail(ev)} title="Nhấp đúp để xem chi tiết">
-                                                            
-                                                            {/* 1. TÊN & TỔNG GIỜ */}
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="font-bold text-gray-800 text-sm">{ev.name}</div>
-                                                                <div className="text-xs font-bold text-yellow-800 bg-white px-2 py-0.5 rounded border border-yellow-200 shadow-sm whitespace-nowrap ml-2">
-                                                                    {calculateHoursDiff(ev.startDate || ev.date, ev.endDate).toFixed(2)} giờ
-                                                                </div>
-                                                            </div>
-
-                                                            {/* 2. THỜI GIAN */}
-                                                            <div className="text-xs text-gray-600 flex items-center gap-1">
-                                                                {formatDate(ev.startDate || ev.date)} 
-                                                                <span className="text-gray-400 mx-1">➔</span> 
-                                                                {ev.endDate ? formatDate(ev.endDate) : '...'}
-                                                            </div>
-
-															{/* 3. TAGS TRẠNG THÁI */}
-                                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                                <span className="inline-block text-[10px] px-1.5 py-0.5 bg-white border border-gray-300 text-gray-600 rounded shadow-sm">
-                                                                    {ev.eventType || 'Khác'}
-                                                                </span>
-                                                                <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded border shadow-sm font-bold ${getEventStatusColor(ev.status)}`}>
-                                                                    {ev.status}
-                                                                </span>
-                                                            </div>
-
-                                                            {/* 4. THÔNG TIN KHÁC */}
-                                                            {ev.info && (
-                                                                <div className="text-xs text-gray-600 bg-white/60 p-1.5 rounded border border-yellow-100 italic">
-																	<span className="font-semibold text-green-400 not-italic mr-1">Ghi chú:</span>
-                                                                    {ev.info}																	
-                                                                </div>
-                                                            )}
-
-                                                            
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <div className="border p-2 bg-yellow-50 rounded text-sm mb-2">
-                                                    <div className="font-bold text-xs mb-1 text-yellow-800">{editingEventId ? "Sửa sự kiện:" : "Thêm mới:"}</div>
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Nội dung sự kiện</label>
-                                                        <input placeholder="Nội dung" className="w-full border p-1 text-xs" value={newEvent.name} onChange={e=>setNewEvent({...newEvent, name: e.target.value})}/>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-1 mb-1">
-                                                        <div>
-                                                            <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Đơn vị thực hiện</label>
-                                                            <input list="pu" placeholder="Đơn vị" className="border p-1 text-xs w-full" value={newEvent.performingUnit} onChange={e=>setNewEvent({...newEvent, performingUnit: e.target.value})}/><datalist id="pu">{PERFORMING_UNITS.map(u=><option key={u} value={u}/>)}</datalist>
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Giàn liên quan</label>
-                                                            <input list="rp" placeholder="Giàn liên quan" className="border p-1 text-xs w-full" value={newEvent.relatedPlatforms} onChange={e=>setNewEvent({...newEvent, relatedPlatforms: e.target.value})}/><datalist id="rp">{RELATED_PLATFORMS.map(p=><option key={p} value={p}/>)}</datalist>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Thiết bị liên quan (nếu có)</label>
-                                                        <input list="eq" placeholder="Thiết bị..." className="border p-1 text-xs w-full" value={newEvent.equipment} onChange={e=>setNewEvent({...newEvent, equipment: e.target.value})}/><datalist id="eq">{MAINTENANCE_EQUIPMENT.map(e=><option key={e} value={e}/>)}</datalist>
-                                                    </div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Loại sự kiện</label>
-                                                        <select 
-                                                            className="w-full border p-1 text-xs bg-white rounded"
-                                                            value={newEvent.eventType || 'Khác'}
-                                                            onChange={e => setNewEvent({...newEvent, eventType: e.target.value})}
-                                                        >
-                                                            {EVENT_TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                        </select>
-                                                    </div>
-
-                                                    <div className="mb-1">
-														<label className="block text-[10px] font-bold text-gray-500 mb-0.5">Thời gian thực hiện</label>
-														<div className="grid grid-cols-2 gap-1">
-															<div>
-																<label className="block text-[9px] text-gray-400 mb-0.5">Bắt đầu</label>
-																{/* 👇 ĐỔI DATE THÀNH DATETIME-LOCAL 👇 */}
-																<input type="datetime-local" className="border p-1 text-xs w-full" value={newEvent.startDate} onChange={e=>setNewEvent({...newEvent, startDate: e.target.value})}/>
+															{/* HÀNG 1: TIÊU ĐỀ + TỔNG GIỜ */}
+															<div className="flex justify-between items-start">
+																<div className="font-bold text-gray-800 text-sm flex-1 mr-2 group-hover:text-red-700 transition-colors">
+																	{plan.equipment ? `${plan.equipment}: ` : ""}{plan.description}
+																</div>
+																<div className="flex items-center font-bold text-red-600 text-xs bg-red-100 px-2 py-0.5 rounded-full border border-red-200 shadow-sm">
+																	<span className="text-red-400 text-[10px] uppercase mr-1">STOP:</span>
+																	{hours.toFixed(2)}h
+																</div>
 															</div>
-															<div>
-																<label className="block text-[9px] text-gray-400 mb-0.5">Kết thúc</label>
-																{/* 👇 ĐỔI DATE THÀNH DATETIME-LOCAL 👇 */}
-																<input type="datetime-local" className="border p-1 text-xs w-full" value={newEvent.endDate} onChange={e=>setNewEvent({...newEvent, endDate: e.target.value})}/>
+
+															{/* HÀNG 2: THỜI GIAN THỰC TẾ (NHÃN RỘNG w-20) */}
+															<div className="text-xs text-gray-500 mt-1">
+																<div className={`flex items-center gap-2 p-1 rounded border ${isProcessing ? 'bg-red-50 border-red-100 text-red-800' : 'bg-emerald-50 border-emerald-100 text-emerald-800'}`}>
+																	<span className={`text-[10px] font-bold uppercase w-20 flex-shrink-0 whitespace-nowrap ${isProcessing ? 'text-red-500' : 'text-emerald-500'}`}>
+																		⏱️ THỰC TẾ:
+																	</span>
+																	<div className="font-mono font-bold text-[11px]">
+																		{formatDate(plan.start)}
+																		{plan.end ? (
+																			<>
+																				<span className="mx-1 opacity-60">➔</span>
+																				{formatDate(plan.end)}
+																			</>
+																		) : (
+																			<span className="ml-2 text-[10px] italic animate-pulse text-red-500">
+																				(Đang xử lý...)
+																			</span>
+																		)}
+																	</div>
+																</div>
+															</div>
+
+															{/* HÀNG 3: TRẠNG THÁI & THÔNG TIN */}
+															<div className="mt-1.5 flex flex-wrap items-center gap-2">
+																<span className={`inline-flex items-center text-[10px] px-2 py-0.5 rounded border shadow-sm font-bold whitespace-nowrap ${getEventStatusColor(plan.status)}`}>
+																	● {plan.status}
+																</span>
+																{plan.eventType && (
+																	<span className="inline-block text-[10px] px-1.5 py-0.5 bg-white border border-gray-300 text-gray-500 rounded shadow-sm">
+																		{plan.eventType}
+																	</span>
+																)}
+															</div>
+
+															{/* HÀNG 4: NGUYÊN NHÂN / GHI CHÚ */}
+															{(plan.cause || plan.info) && (
+																<div className="text-gray-500 italic mt-1 bg-white p-1.5 rounded border border-gray-100 text-[11px] space-y-1">
+																	{plan.cause && <div><span className="font-semibold text-red-400 not-italic mr-1">Nguyên nhân:</span>{plan.cause}</div>}
+																	{plan.info && <div><span className="font-semibold text-gray-400 not-italic mr-1">Ghi chú:</span>{plan.info}</div>}
+																</div>
+															)}
+														</div>
+													);
+												})}
+											</div>
+										</div>
+									) : (
+										/* PHẦN SỬA NHANH (BẠN CÓ THỂ GIỮ LẠI HOẶC BỎ) */
+										<div>...</div>
+									)}
+								</Card>
+
+                                    {/* CARD CÁC SỰ KIỆN KHÁC (GIAO DIỆN MỚI - ĐỒNG BỘ) */}
+                                <Card className="p-5">
+                                    <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+                                        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">Các sự kiện khác</h3>
+                                        
+                                        {/* Nút Hủy chế độ sửa (nếu đang bật) */}
+                                        {isEditingEvent && (
+                                            <button onClick={()=>setIsEditingEvent(false)} className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">
+                                                Hủy
+                                            </button>
+                                        )}
+										{/* --- NÚT BÁO CÁO SỰ KIỆN (MỚI) --- */}
+											<button 
+												onClick={() => setShowAnnualEventModal(true)}
+												className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded hover:bg-purple-100 transition-colors flex items-center gap-1 font-bold shadow-sm"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+												Báo cáo sự kiện
+											</button>
+                                    </div>
+
+                                    {!isEditingEvent ? (
+                                        <div>
+                                            {/* Header phụ của Card Sự kiện */}
+											<div className="mb-2">
+												{ADMIN_USERS.includes(currentUser) && (
+													<button 
+														onClick={handleAddEventDirectly} 
+														className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-colors font-medium border border-purple-200"
+													>
+														+ Thêm sự kiện
+													</button>
+												)}
+											</div>
+                                            
+                                            {/* DANH SÁCH CÁC SỰ KIỆN KHÁC */}
+                                            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                                {(!currentSharedData.events || currentSharedData.events.length === 0) && (
+                                                    <p className="text-xs text-gray-400 italic text-center py-2">Chưa có sự kiện nào</p>
+                                                )}
+
+                                                {currentSharedData.events.map(ev => {
+												// Tính toán số giờ thực hiện (nếu có đủ ngày bắt đầu và kết thúc)
+												const hours = calculateHoursDiff(ev.startDate || ev.date, ev.endDate);
+
+												return (
+													<div key={ev.id} className="text-sm bg-gray-50 p-3 rounded border border-gray-200 cursor-pointer hover:bg-purple-50 transition-colors flex flex-col gap-1 group" onDoubleClick={()=>openEventDetail(ev)}>
+														
+														{/* HÀNG 1: TIÊU ĐỀ + TỔNG GIỜ */}
+														<div className="flex justify-between items-start">
+															<div className="font-bold text-gray-800 text-sm flex-1 mr-2 group-hover:text-purple-700 transition-colors">
+																{ev.name}
+															</div>
+															<div className="flex items-center font-bold text-purple-600 text-xs bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200 shadow-sm">
+																<span className="text-purple-400 text-[10px] uppercase mr-1">TIME:</span>
+																{hours.toFixed(2)}h
 															</div>
 														</div>
-													</div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Thông tin khác</label>
-                                                        <textarea placeholder="Thông tin khác" className="w-full border p-1 text-xs h-16" value={newEvent.info} onChange={e=>setNewEvent({...newEvent, info: e.target.value})}/>
-                                                    </div>
-                                                    
-                                                    <div className="mb-1">
-                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Tình trạng thực hiện</label>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {EVENT_STATUS_OPTIONS.map(s => (
-                                                                <label key={s} className="text-[10px] flex items-center gap-1 bg-white px-1 border rounded"><input type="radio" name="evtSt" checked={newEvent.status===s} onChange={()=>setNewEvent({...newEvent, status: s})}/>{s}</label>
-                                                            ))}
-                                                        </div>
-                                                    </div>
 
-                                                    <div className="flex gap-2">
-                                                        <button onClick={handleAddOrUpdateEvent} className="flex-1 bg-green-600 text-white py-1 rounded font-bold">{editingEventId ? "Cập nhật" : "Thêm"}</button>
-                                                        {editingEventId && <button onClick={()=>handleDeleteEventItem(editingEventId)} className="bg-red-100 text-red-600 px-3 rounded text-xs font-bold">Xóa</button>}
+														{/* HÀNG 2: THỜI GIAN CHI TIẾT (DỰ KIẾN vs THỰC TẾ) */}
+														<div className="text-xs text-gray-500 mt-2 space-y-1">
+															
+															{/* A. DÒNG DỰ KIẾN (Nếu có dữ liệu dự kiến) */}
+															{ev.plannedStart && (
+																<div className="flex items-center gap-2 bg-slate-50 p-1 rounded border border-slate-100">
+																	<span className="text-[10px] font-bold text-slate-400 uppercase w-20 flex-shrink-0 whitespace-nowrap">
+																		📅 DỰ KIẾN:
+																	</span>
+																	<span className="font-mono text-[11px] text-slate-600">
+																		{formatDate(ev.plannedStart)} 
+																		<span className="mx-1 text-slate-300">➔</span> 
+																		{formatDate(ev.plannedEnd)}
+																	</span>
+																</div>
+															)}
+
+															{/* B. DÒNG THỰC TẾ (Màu tím đồng bộ với thẻ Sự kiện) */}
+															<div className="flex items-center gap-2 p-1 rounded border bg-purple-50 border-purple-100 text-purple-800">
+																<span className="text-[10px] font-bold uppercase w-20 flex-shrink-0 whitespace-nowrap text-purple-500">
+																	⏱️ THỰC TẾ:
+																</span>
+																<div className="font-mono font-bold text-[11px]">
+																	{formatDate(ev.startDate || ev.date)}
+																	{ev.endDate ? (
+																		<>
+																			<span className="mx-1 opacity-60">➔</span>
+																			{formatDate(ev.endDate)}
+																		</>
+																	) : (
+																		<span className="ml-2 text-[10px] italic animate-pulse text-red-500">
+																			(Đang diễn ra...)
+																		</span>
+																	)}
+																</div>
+															</div>
+														</div>
+
+														{/* HÀNG 3: LOẠI & TRẠNG THÁI */}
+														<div className="mt-1.5 flex flex-wrap items-center gap-2">
+															<span className="inline-block text-[10px] px-1.5 py-0.5 bg-white border border-gray-300 text-gray-500 rounded shadow-sm">
+																{ev.eventType || 'Khác'}
+															</span>
+															{ev.status && (
+																<span className={`inline-flex items-center text-[10px] px-2 py-0.5 rounded border shadow-sm font-bold whitespace-nowrap ${getEventStatusColor(ev.status)}`}>
+																	● {ev.status}
+																</span>
+															)}
+														</div>
+
+														{/* HÀNG 4: GHI CHÚ */}
+														{ev.info && (
+															<div className="text-gray-500 italic mt-1 bg-white p-1.5 rounded border border-gray-100 text-[11px]">
+																<span className="font-semibold text-purple-400 not-italic mr-1">Ghi chú:</span>
+																{ev.info}
+															</div>
+														)}
+													</div>
+												);
+											})}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* CHẾ ĐỘ SỬA NHANH (GIỮ NGUYÊN FORM NHƯ CŨ NHƯNG BỎ ĐƠN VỊ) */
+                                        <div>
+                                            <div className="border p-2 bg-purple-50 rounded text-sm mb-2 border-purple-200">
+                                                <div className="font-bold text-xs mb-1 text-purple-800">{editingEventId ? "Sửa sự kiện:" : "Thêm mới:"}</div>
+                                                <input placeholder="Nội dung sự kiện..." className="w-full border p-1 mb-1 text-xs" value={newEvent.name} onChange={e=>setNewEvent({...newEvent, name: e.target.value})}/>
+                                                
+                                                <div className="grid grid-cols-2 gap-1 mb-1">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Giàn liên quan</label>
+                                                        <input list="rp" placeholder="Giàn..." className="border p-1 text-xs w-full" value={newEvent.relatedPlatforms} onChange={e=>setNewEvent({...newEvent, relatedPlatforms: e.target.value})}/><datalist id="rp">{RELATED_PLATFORMS.map(p=><option key={p} value={p}/>)}</datalist>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Thiết bị</label>
+                                                        <input list="eq" placeholder="Thiết bị..." className="border p-1 text-xs w-full" value={newEvent.equipment} onChange={e=>setNewEvent({...newEvent, equipment: e.target.value})}/><datalist id="eq">{MAINTENANCE_EQUIPMENT.map(e=><option key={e} value={e}/>)}</datalist>
                                                     </div>
                                                 </div>
-                                                <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
-                                                    {tempEvents.map(ev => (
-                                                        <div key={ev.id} className={`text-xs p-1 border rounded cursor-pointer ${editingEventId===ev.id ? 'bg-blue-100 border-blue-300' : 'bg-gray-50'}`} onClick={()=>handleStartEditEventItem(ev)}>{ev.name}</div>
-                                                    ))}
+
+                                                <div className="mb-1">
+                                                    <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Thời gian thực hiện</label>
+                                                    <div className="grid grid-cols-2 gap-1">
+                                                        <input type="datetime-local" className="border p-1 text-xs w-full" value={newEvent.startDate} onChange={e=>setNewEvent({...newEvent, startDate: e.target.value})}/>
+                                                        <input type="datetime-local" className="border p-1 text-xs w-full" value={newEvent.endDate} onChange={e=>setNewEvent({...newEvent, endDate: e.target.value})}/>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="mb-1">
+                                                    <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Thông tin khác</label>
+                                                    <textarea placeholder="Ghi chú..." className="w-full border p-1 text-xs h-10" value={newEvent.info} onChange={e=>setNewEvent({...newEvent, info: e.target.value})}/>
+                                                </div>
+
+                                                <div className="mb-1">
+                                                    <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Loại</label>
+                                                    <select className="w-full border p-1 text-xs bg-white" value={newEvent.eventType || 'Khác'} onChange={e => setNewEvent({...newEvent, eventType: e.target.value})}>
+                                                        {EVENT_TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                    </select>
+                                                </div>
+
+                                                <div className="mb-1">
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        {EVENT_STATUS_OPTIONS.map(s => (
+                                                            <label key={s} className="text-[10px] flex items-center gap-1 bg-white px-1 border rounded cursor-pointer hover:bg-gray-50">
+                                                                <input type="radio" name="evtSt" checked={newEvent.status===s} onChange={()=>setNewEvent({...newEvent, status: s})}/>{s}
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2 mt-2">
+                                                    <button onClick={handleAddOrUpdateEvent} className="flex-1 bg-purple-600 text-white py-1 rounded font-bold hover:bg-purple-700">{editingEventId ? "Cập nhật" : "Thêm"}</button>
+                                                    {editingEventId && <button onClick={()=>handleDeleteEventItem(editingEventId)} className="bg-gray-100 text-gray-600 px-3 rounded text-xs font-bold hover:bg-gray-200">Xóa</button>}
                                                 </div>
                                             </div>
-                                        )}
-                                    </Card>
+
+                                            <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+                                                {tempEvents.map(ev => (
+                                                    <div key={ev.id} className={`text-xs p-1 border rounded cursor-pointer ${editingEventId===ev.id ? 'bg-purple-100 border-purple-300' : 'bg-gray-50'}`} onClick={()=>handleStartEditEventItem(ev)}>
+                                                        <span className="font-semibold">{ev.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </Card>
                                 </div>
 
                                 
@@ -6249,7 +6364,7 @@
                             </div>
                         )}
 
-						{/* --- BẢNG BÁO CÁO KẾ HOẠCH BẢO DƯỠNG NĂM (UPDATE V4: CÓ BỘ LỌC) --- */}
+						{/* --- BÁO CÁO KẾ HOẠCH BẢO DƯỠNG NĂM (UPDATE V4: CÓ BỘ LỌC) --- */}
                         {showAnnualMaintModal && (
                             <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-[10005] p-2 md:p-4">
                                 <div className="bg-white w-full max-w-[95%] h-full md:h-auto md:max-h-[95vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -6501,6 +6616,358 @@
                             </div>
                         )}
 
+						{/* --- BÁO CÁO SỰ CỐ DỪNG MÁY (THEO THÁNG/QUÝ/NĂM) --- */}
+						{showAnnualShutdownModal && (
+							<div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-[10005] p-2 md:p-4">
+								<div className="bg-white w-full max-w-[95%] h-full md:h-auto md:max-h-[95vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+									
+									{/* Header Modal */}
+									<div className="p-4 border-b bg-rose-700 text-white flex justify-between items-center shrink-0">
+										<div className="flex items-center gap-3">
+											<div className="bg-white/20 p-2 rounded-lg">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+											</div>
+											<div>
+												<h2 className="text-xl font-bold uppercase tracking-wide">Báo cáo Tổng hợp Sự cố dừng máy {year}</h2>
+												<p className="text-rose-200 text-xs">Dữ liệu lọc theo: {shutdownReportPeriod === 'YEAR' ? 'Cả năm' : shutdownReportPeriod === 'MONTH' ? `Tháng ${selectedMonth}` : `Quý ${shutdownReportPeriod.replace('Q','')}`}</p>
+											</div>
+										</div>
+										<div className="flex gap-2">
+											<button onClick={() => window.print()} className="bg-white text-rose-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-rose-50 shadow-sm flex items-center gap-2">
+												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+												In Báo cáo
+											</button>
+											<button onClick={() => setShowAnnualShutdownModal(false)} className="text-rose-100 hover:text-white hover:bg-rose-600/50 p-2 rounded-lg transition-colors">✕ Đóng</button>
+										</div>
+									</div>
+
+									{/* --- THANH BỘ LỌC NÂNG CẤP --- */}
+									<div className="bg-gray-50 border-b border-gray-200 p-3 flex flex-wrap gap-6 items-center print:hidden">
+										{/* Lọc theo Kỳ (Mới) */}
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-bold text-gray-500 uppercase">Kỳ báo cáo:</span>
+											<select 
+												className="border border-gray-300 rounded px-2 py-1 text-sm font-bold text-rose-700 outline-none focus:ring-2 focus:ring-rose-500"
+												value={shutdownReportPeriod}
+												onChange={(e) => setShutdownReportPeriod(e.target.value)}
+											>
+												<option value="MONTH">Tháng hiện tại ({selectedMonth})</option>
+												<option value="Q1">Quý 1 (Tháng 1-3)</option>
+												<option value="Q2">Quý 2 (Tháng 4-6)</option>
+												<option value="Q3">Quý 3 (Tháng 7-9)</option>
+												<option value="Q4">Quý 4 (Tháng 10-12)</option>
+												<option value="YEAR">Cả Năm {year}</option>
+											</select>
+										</div>
+
+										{/* Lọc theo Thiết bị */}
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-bold text-gray-500 uppercase">Thiết bị:</span>
+											<select 
+												className="border border-gray-300 rounded px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-500"
+												value={yearFilterEq}
+												onChange={(e) => setYearFilterEq(e.target.value)}
+											>
+												<option value="ALL">-- Tất cả --</option>
+												{AFFECTED_EQUIPMENT_OPTIONS.map(eq => <option key={eq} value={eq}>{eq}</option>)}
+											</select>
+										</div>
+
+										{/* Lọc theo Trạng thái */}
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-bold text-gray-500 uppercase">Trạng thái:</span>
+											<select 
+												className="border border-gray-300 rounded px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-500"
+												value={yearFilterSt}
+												onChange={(e) => setYearFilterSt(e.target.value)}
+											>
+												<option value="ALL">-- Tất cả --</option>
+												{SHUTDOWN_STATUS_OPTIONS.map(st => <option key={st} value={st}>{st}</option>)}
+											</select>
+										</div>
+									</div>
+
+									{/* Bảng dữ liệu */}
+									<div className="flex-1 overflow-y-auto p-4 bg-slate-50 custom-scrollbar print:overflow-visible print:h-auto">
+										<div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden print:border-none print:shadow-none">
+											<table className="w-full text-xs text-left border-collapse">
+												<thead className="bg-gray-100 text-gray-600 uppercase font-bold sticky top-0 z-10 print:static">
+													<tr>
+														<th className="p-3 border-b border-r text-center w-24">Tháng</th> 
+														<th className="p-3 border-b border-r w-24 text-center">Thiết bị</th>
+														<th className="p-3 border-b border-r w-40">Mô tả sự cố</th>
+														<th className="p-3 border-b border-r w-40">Nguyên nhân</th>
+														<th className="p-3 border-b border-r text-center bg-red-50 text-red-800">Thời gian dừng máy</th>
+														<th className="p-3 border-b w-28 text-center">Trạng thái</th>
+													</tr>
+												</thead>
+												<tbody className="divide-y divide-gray-200 text-slate-700">
+													{(() => {
+														// 1. Xác định danh sách tháng cần quét dựa trên bộ lọc Kỳ
+														let monthsToScan = [];
+														if (shutdownReportPeriod === 'MONTH') monthsToScan = [selectedMonth];
+														else if (shutdownReportPeriod === 'Q1') monthsToScan = [1, 2, 3];
+														else if (shutdownReportPeriod === 'Q2') monthsToScan = [4, 5, 6];
+														else if (shutdownReportPeriod === 'Q3') monthsToScan = [7, 8, 9];
+														else if (shutdownReportPeriod === 'Q4') monthsToScan = [10, 11, 12];
+														else if (shutdownReportPeriod === 'YEAR') monthsToScan = [1,2,3,4,5,6,7,8,9,10,11,12];
+
+														// 2. Tổng hợp dữ liệu từ các tháng đã chọn
+														let rawIncidents = [];
+														monthsToScan.forEach(m => {
+															const items = db?.SHARED?.[m]?.shutdownIncidents || [];
+															items.forEach(i => rawIncidents.push({ ...i, month: m }));
+														});
+
+														// 3. Áp dụng bộ lọc thiết bị và trạng thái
+														const filtered = rawIncidents.filter(i => {
+															const matchEq = yearFilterEq === 'ALL' || i.equipment === yearFilterEq;
+															const matchSt = yearFilterSt === 'ALL' || i.status === yearFilterSt;
+															return matchEq && matchSt;
+														});
+
+														if (filtered.length === 0) return <tr><td colSpan={6} className="p-8 text-center text-gray-400 italic">Không tìm thấy dữ liệu sự cố trong kỳ báo cáo đã chọn.</td></tr>;
+
+														// 4. Sắp xếp và tính RowSpan
+														filtered.sort((a, b) => a.month - b.month || new Date(a.start) - new Date(b.start));
+														const monthCounts = {};
+														filtered.forEach(p => monthCounts[p.month] = (monthCounts[p.month] || 0) + 1);
+
+														return filtered.map((item, idx) => {
+															const isFirstRowOfMonth = idx === 0 || item.month !== filtered[idx - 1].month;
+															const duration = calculateHoursDiff(item.start, item.end);
+
+															return (
+																<tr key={idx} className="hover:bg-rose-50/30 transition-colors">
+																	{isFirstRowOfMonth && (
+																		<td className="p-3 text-center font-bold border-r text-gray-800 bg-gray-50 align-middle border-b" rowSpan={monthCounts[item.month]}>
+																			Tháng {item.month}
+																		</td>
+																	)}
+																	<td className="p-3 border-r font-bold text-red-700 text-center">{item.equipment}</td>
+																	<td className="p-3 border-r font-medium">{item.description}</td>
+																	<td className="p-3 border-r text-gray-500 italic">{item.cause || "-"}</td>
+																	<td className="p-3 border-r bg-red-50/10 align-middle">
+																		<div className="flex flex-col gap-1 items-center">
+																			<div className="text-xs text-gray-600 font-mono">
+																				{formatDate(item.start)} <br/> ↓ <br/> {item.end ? formatDate(item.end) : <span className="text-red-500 animate-pulse font-bold">Chưa khắc phục</span>}
+																			</div>
+																			<div className="font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-100 w-full text-center mt-1">
+																				{duration.toFixed(1)}h ({(duration/24).toFixed(1)} ngày)
+																			</div>
+																		</div>
+																	</td>
+																	<td className="p-3 text-center align-middle">
+																		<span className={`inline-block text-[10px] px-2 py-1 rounded border font-bold ${getEventStatusColor(item.status)}`}>
+																			{item.status}
+																		</span>
+																	</td>
+																</tr>
+															);
+														});
+													})()}
+												</tbody>
+											</table>
+										</div>
+										
+										{/* Footer Chữ ký */}
+										<div className="mt-8 grid grid-cols-2 text-center text-sm font-bold text-gray-700 break-inside-avoid">
+											<div>
+												<p className="uppercase text-gray-500 text-xs mb-16">Người lập biểu</p>
+												<p>{currentUser || '....................'}</p>
+											</div>
+											<div>
+												<p className="uppercase text-gray-500 text-xs mb-16">Lãnh đạo phê duyệt</p>
+												<p>....................</p>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* --- MBÁO CÁO SỰ KIỆN KHÁC (THEO THÁNG/QUÝ/NĂM) --- */}
+						{showAnnualEventModal && (
+							<div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-[10005] p-2 md:p-4">
+								<div className="bg-white w-full max-w-[95%] h-full md:h-auto md:max-h-[95vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+									
+									{/* Header Modal */}
+									<div className="p-4 border-b bg-purple-700 text-white flex justify-between items-center shrink-0">
+										<div className="flex items-center gap-3">
+											<div className="bg-white/20 p-2 rounded-lg">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+											</div>
+											<div>
+												<h2 className="text-xl font-bold uppercase tracking-wide">Báo cáo Tổng hợp Sự kiện khác {year}</h2>
+												<p className="text-purple-200 text-xs">Chi tiết tiến độ thực hiện và thời lượng công việc</p>
+											</div>
+										</div>
+										<div className="flex gap-2">
+											<button onClick={() => window.print()} className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-50 shadow-sm flex items-center gap-2">
+												<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+												In Báo cáo
+											</button>
+											<button onClick={() => setShowAnnualEventModal(false)} className="text-purple-100 hover:text-white hover:bg-purple-600/50 p-2 rounded-lg transition-colors">✕ Đóng</button>
+										</div>
+									</div>
+
+									{/* Thanh Bộ lọc */}
+									<div className="bg-gray-50 border-b border-gray-200 p-3 flex flex-wrap gap-6 items-center print:hidden">
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-bold text-gray-500 uppercase">Kỳ báo cáo:</span>
+											<select 
+												className="border border-gray-300 rounded px-2 py-1 text-sm font-bold text-purple-700 outline-none focus:ring-2 focus:ring-purple-500"
+												value={eventReportPeriod}
+												onChange={(e) => setEventReportPeriod(e.target.value)}
+											>
+												<option value="MONTH">Tháng hiện tại ({selectedMonth})</option>
+												<option value="Q1">Quý 1 (Tháng 1-3)</option>
+												<option value="Q2">Quý 2 (Tháng 4-6)</option>
+												<option value="Q3">Quý 3 (Tháng 7-9)</option>
+												<option value="Q4">Quý 4 (Tháng 10-12)</option>
+												<option value="YEAR">Cả Năm {year}</option>
+											</select>
+										</div>
+
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-bold text-gray-500 uppercase">Thiết bị:</span>
+											<select 
+												className="border border-gray-300 rounded px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-purple-500"
+												value={yearFilterEq}
+												onChange={(e) => setYearFilterEq(e.target.value)}
+											>
+												<option value="ALL">-- Tất cả --</option>
+												{MAINTENANCE_EQUIPMENT.map(eq => <option key={eq} value={eq}>{eq}</option>)}
+											</select>
+										</div>
+
+										<div className="flex items-center gap-2">
+											<span className="text-xs font-bold text-gray-500 uppercase">Trạng thái:</span>
+											<select 
+												className="border border-gray-300 rounded px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-purple-500"
+												value={yearFilterSt}
+												onChange={(e) => setYearFilterSt(e.target.value)}
+											>
+												<option value="ALL">-- Tất cả --</option>
+												{EVENT_STATUS_OPTIONS.map(st => <option key={st} value={st}>{st}</option>)}
+											</select>
+										</div>
+									</div>
+
+									{/* Nội dung bảng */}
+									<div className="flex-1 overflow-y-auto p-4 bg-slate-50 custom-scrollbar print:overflow-visible print:h-auto">
+										<div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden print:border-none print:shadow-none">
+											<table className="w-full text-xs text-left border-collapse">
+												<thead className="bg-gray-100 text-gray-600 uppercase font-bold sticky top-0 z-10 print:static">
+													<tr>
+														<th className="p-3 border-b border-r text-center w-24">Tháng</th> 
+														<th className="p-3 border-b border-r w-24 text-center">Thiết bị</th>
+														<th className="p-3 border-b border-r w-40">Nội dung sự kiện</th>
+														<th className="p-3 border-b border-r w-20 text-center">Loại</th>
+														<th className="p-3 border-b border-r text-center bg-blue-50 text-blue-800 w-44">Thời gian Dự kiến</th>
+														<th className="p-3 border-b border-r text-center bg-purple-50 text-purple-800 w-44">Thời gian Thực tế</th>
+														<th className="p-3 border-b w-28 text-center">Trạng thái</th>
+													</tr>
+												</thead>
+												<tbody className="divide-y divide-gray-200 text-slate-700">
+													{(() => {
+														// 1. Tổng hợp dữ liệu theo Kỳ
+														let monthsToScan = [];
+														if (eventReportPeriod === 'MONTH') monthsToScan = [selectedMonth];
+														else if (eventReportPeriod === 'Q1') monthsToScan = [1, 2, 3];
+														else if (eventReportPeriod === 'Q2') monthsToScan = [4, 5, 6];
+														else if (eventReportPeriod === 'Q3') monthsToScan = [7, 8, 9];
+														else if (eventReportPeriod === 'Q4') monthsToScan = [10, 11, 12];
+														else if (eventReportPeriod === 'YEAR') monthsToScan = [1,2,3,4,5,6,7,8,9,10,11,12];
+
+														let rawEvents = [];
+														monthsToScan.forEach(m => {
+															const items = db?.SHARED?.[m]?.events || [];
+															items.forEach(i => rawEvents.push({ ...i, month: m }));
+														});
+
+														// 2. Lọc
+														const filtered = rawEvents.filter(i => {
+															const matchEq = yearFilterEq === 'ALL' || i.equipment === yearFilterEq;
+															const matchSt = yearFilterSt === 'ALL' || i.status === yearFilterSt;
+															return matchEq && matchSt;
+														});
+
+														if (filtered.length === 0) return <tr><td colSpan={7} className="p-8 text-center text-gray-400 italic">Không tìm thấy dữ liệu sự kiện phù hợp.</td></tr>;
+
+														// 3. Sắp xếp & RowSpan
+														filtered.sort((a, b) => a.month - b.month || new Date(a.startDate) - new Date(b.startDate));
+														const monthCounts = {};
+														filtered.forEach(p => monthCounts[p.month] = (monthCounts[p.month] || 0) + 1);
+
+														return filtered.map((item, idx) => {
+															const isFirstRowOfMonth = idx === 0 || item.month !== filtered[idx - 1].month;
+															const planHrs = calculateHoursDiff(item.plannedStart, item.plannedEnd);
+															const actHrs = calculateHoursDiff(item.startDate, item.endDate);
+
+															return (
+																<tr key={idx} className="hover:bg-purple-50/20 transition-colors">
+																	{isFirstRowOfMonth && (
+																		<td className="p-3 text-center font-bold border-r text-gray-800 bg-gray-50 align-middle border-b" rowSpan={monthCounts[item.month]}>
+																			Tháng {item.month}
+																		</td>
+																	)}
+																	<td className="p-3 border-r font-bold text-slate-700 text-center">{item.equipment || "-"}</td>
+																	<td className="p-3 border-r font-medium">
+																		{item.name}
+																		{item.info && <div className="text-[10px] text-gray-400 italic font-normal mt-1">{item.info}</div>}
+																	</td>
+																	<td className="p-3 border-r text-center text-gray-500 font-medium">{item.eventType}</td>
+																	
+																	{/* Cột Dự kiến */}
+																	<td className="p-3 border-r bg-blue-50/10 align-middle text-center">
+																		{item.plannedStart ? (
+																			<>
+																				<div className="text-xs text-gray-600 font-mono">
+																					{formatDate(item.plannedStart)} <br/> ↓ <br/> {formatDate(item.plannedEnd)}
+																				</div>
+																				<div className="font-bold text-blue-700 mt-1">{planHrs.toFixed(1)}h ({(planHrs/24).toFixed(1)}n)</div>
+																			</>
+																		) : "-"}
+																	</td>
+
+																	{/* Cột Thực tế */}
+																	<td className="p-3 border-r bg-purple-50/10 align-middle text-center">
+																		<div className="text-xs text-gray-600 font-mono">
+																			{formatDate(item.startDate)} <br/> ↓ <br/> {item.endDate ? formatDate(item.endDate) : <span className="text-red-500 italic">Đang tiến hành...</span>}
+																		</div>
+																		{item.endDate && <div className="font-bold text-purple-700 mt-1">{actHrs.toFixed(1)}h ({(actHrs/24).toFixed(1)}n)</div>}
+																	</td>
+
+																	<td className="p-3 text-center align-middle">
+																		<span className={`inline-block text-[10px] px-2 py-1 rounded border font-bold ${getEventStatusColor(item.status)}`}>
+																			{item.status}
+																		</span>
+																	</td>
+																</tr>
+															);
+														});
+													})()}
+												</tbody>
+											</table>
+										</div>
+										
+										{/* Footer Chữ ký */}
+										<div className="mt-8 grid grid-cols-2 text-center text-sm font-bold text-gray-700 break-inside-avoid">
+											<div>
+												<p className="uppercase text-gray-500 text-xs mb-16">Người lập biểu</p>
+												<p>{currentUser || '....................'}</p>
+											</div>
+											<div>
+												<p className="uppercase text-gray-500 text-xs mb-16">Lãnh đạo phê duyệt</p>
+												<p>....................</p>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						)}
+
                         {/* Giao diện IMPORT PLAN EXCEL MODAL (GIAO DIỆN PRO - ĐÃ CẬP NHẬT 3 CỘT) */}
                         {importMode && (
                             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10003] p-4 backdrop-blur-sm">
@@ -6695,7 +7162,7 @@
                             </div>
                         )}
 
-                        {/* BẢNG CHI TIẾT KẾ HOẠCH BẢO DƯỠNG MODAL (CẬP NHẬT: DỰ KIẾN & THỰC TẾ & KẾ HOẠCH TIẾP THEO) */}
+                        {/* BẢNG CHI TIẾT KẾ HOẠCH BẢO DƯỠNG MODAL*/}
 						{maintDetail && (
 						<div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10001] p-4 backdrop-blur-sm">
 							<div className="bg-white rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
@@ -6985,6 +7452,26 @@
                                             onChange={e => setMaintDetail({...maintDetail, info: e.target.value})}
                                         />
                                     </div>
+									{/* 5. Trạng thái kế hoạch bảo dưỡng(ĐÃ CẬP NHẬT TỰ ĐỘNG) */}
+									<div className="mt-4 p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+										<div className="flex justify-between items-center">
+											<div>
+												<label className="block text-[11px] font-bold text-slate-500 uppercase leading-tight">Trạng thái hệ thống:</label>
+												<p className="text-[10px] text-slate-400 italic">Tự động nhận diện từ thời gian thực tế</p>
+											</div>
+											
+											{(() => {
+												// Logic hiển thị realtime khi đang nhập liệu trong Modal
+												const currentStatus = autoDetermineStatus(maintDetail.start, maintDetail.end);
+												return (
+													<div className={`px-4 py-1.5 rounded-full border text-xs font-black shadow-sm flex items-center gap-2 ${getEventStatusColor(currentStatus)}`}>
+														<span className="w-2 h-2 rounded-full bg-current"></span>
+														{currentStatus.toUpperCase()}
+													</div>
+												);
+											})()}
+										</div>
+									</div>
 									
 								</div> 
 								{/* 👆 KẾT THÚC VÙNG CUỘN}
@@ -7005,393 +7492,533 @@
 						</div>
 					)}
 
-                        {/* SHUTDOWN DETAIL MODAL */}
-                        {shutdownDetail && (
-                             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10001] p-4 backdrop-blur-sm" style={{zIndex: 10000}}>
-                                <div className="bg-white rounded-xl w-full max-w-md shadow-2xl flex flex-col transform transition-all scale-100">
-                                    <div className="p-5 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
-                                        <h2 className="text-lg font-bold text-gray-800">Chi tiết sự cố dừng máy</h2>
-                                        <button onClick={closeShutdownDetail} className="text-gray-400 hover:text-red-500 transition-colors">✕</button>
-                                    </div>
-                                    <div className="p-6 space-y-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Mô tả sự cố</label>
-                                            <input placeholder="Mô tả sự cố" className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={shutdownDetail.description} onChange={e => setShutdownDetail({...shutdownDetail, description: e.target.value})} />
-                                        </div>
-                                        
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Thiết bị bị sự cố</label>
-                                            <select 
-                                                className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                value={shutdownDetail.equipment}
-                                                onChange={e => setShutdownDetail({...shutdownDetail, equipment: e.target.value})}
-                                            >
-                                                <option value="">-- Chọn thiết bị --</option>
-                                                {AFFECTED_EQUIPMENT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                            </select>
-                                        </div>
+                        {/* BẢNG CHI TIẾT SỰ CỐ DỪNG MÁY MODAL (ĐỒNG BỘ GIAO DIỆN) */}
+{shutdownDetail && (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10001] p-4 backdrop-blur-sm">
+        <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+            
+            {/* Header chuyên nghiệp */}
+            <div className="p-4 border-b flex justify-between items-center bg-red-50">
+                <div>
+                    <h2 className="text-lg font-bold text-red-900">
+                        {!shutdownDetail.id ? "Thêm mới Sự cố" : "Chi tiết Sự cố dừng máy"}
+                    </h2>
+                    <p className="text-[10px] text-red-600 uppercase font-semibold">
+                        GHI NHẬN BIẾN ĐỘNG DỪNG/CHẠY MÁY THỰC TẾ
+                    </p>
+                </div>
+                <button onClick={closeShutdownDetail} className="text-gray-400 hover:text-red-500 bg-white w-8 h-8 rounded-full shadow-sm border flex items-center justify-center transition-colors">✕</button>
+            </div>
 
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Đơn vị quản lý</label>
-                                                <input list="performingUnitsShutdown" placeholder="Chọn/Nhập..." className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={shutdownDetail.performingUnit || ''} onChange={e => setShutdownDetail({...shutdownDetail, performingUnit: e.target.value})} />
-                                                <datalist id="performingUnitsShutdown">{PERFORMING_UNITS.map(unit => <option key={unit} value={unit} />)}</datalist>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Các giàn liên quan</label>
-                                                <input list="relatedPlatformsShutdown" placeholder="Chọn/Nhập..." className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={shutdownDetail.relatedPlatforms || ''} onChange={e => setShutdownDetail({...shutdownDetail, relatedPlatforms: e.target.value})} />
-                                                <datalist id="relatedPlatformsShutdown">{RELATED_PLATFORMS.map(p => <option key={p} value={p} />)}</datalist>
-                                            </div>
-                                        </div>
-                                         
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Loại sự kiện</label>
-                                            <select 
-                                                className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                value={shutdownDetail.eventType || 'Sự cố'}
-                                                onChange={e => setShutdownDetail({...shutdownDetail, eventType: e.target.value})}
-                                            >
-                                                <option value="Sự cố">Sự cố</option>
-                                            </select>
-                                        </div>
-										
-										{/* THỜI GIAN SỰ CỐ) */}
-                                        <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Thời gian sự cố (Giờ/Ngày/Tháng/Năm)</label>
-                                        
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {/* Ô BẮT ĐẦU (CÓ GIỜ) */}
-                                            <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Bắt đầu</label>
-                                                <input 
-                                                    type="datetime-local" 
-                                                    className="w-full border border-gray-300 rounded p-2 text-sm" 
-                                                    value={shutdownDetail.start} 
-                                                    onChange={e => setShutdownDetail({...shutdownDetail, start: e.target.value})} 
-                                                />
-                                            </div>
+            {/* 👇 VÙNG CUỘN NỘI DUNG CHÍNH 👇 */}
+            <div className="p-5 space-y-4 overflow-y-auto custom-scrollbar">
+                
+                {/* 1. Thông tin chung */}
+                <div className="space-y-3">
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase mb-[-8px]">Mô tả sự cố</label>
+                    <input 
+                        placeholder="Nhập nội dung sự cố..." 
+                        className="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-bold focus:ring-2 focus:ring-red-500 outline-none shadow-sm" 
+                        value={shutdownDetail.description} 
+                        onChange={e => setShutdownDetail({...shutdownDetail, description: e.target.value})} 
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">Thiết bị bị ảnh hưởng</label>
+                            <select 
+                                className="w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-red-700 focus:ring-2 focus:ring-red-500 outline-none bg-white" 
+                                value={shutdownDetail.equipment} 
+                                onChange={e => setShutdownDetail({...shutdownDetail, equipment: e.target.value})}
+                            >
+                                <option value="">-- Chọn thiết bị --</option>
+                                {AFFECTED_EQUIPMENT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">Giàn liên quan</label>
+                            <input list="rpShutdownDetail" className="w-full border border-slate-300 rounded-lg p-2 text-sm" value={shutdownDetail.relatedPlatforms || ''} onChange={e => setShutdownDetail({...shutdownDetail, relatedPlatforms: e.target.value})} placeholder="Chọn/Nhập..." />
+                            <datalist id="rpShutdownDetail">{RELATED_PLATFORMS.map(p => <option key={p} value={p} />)}</datalist>
+                        </div>
+                    </div>
+                </div>
 
-                                            {/* Ô KẾT THÚC (CÓ GIỜ) */}
-                                            <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Kết thúc</label>
-                                                <input 
-                                                    type="datetime-local" 
-                                                    className="w-full border border-gray-300 rounded p-2 text-sm" 
-                                                    value={shutdownDetail.end} 
-                                                    onChange={e => setShutdownDetail({...shutdownDetail, end: e.target.value})} 
-                                                />
-                                            </div>
-                                        </div>
+                {/* 2. Khối Thời gian thực tế (Màu Đỏ nhạt) */}
+                <div className="bg-red-50/50 p-3 rounded-xl border border-red-100 space-y-2">
+                    <h3 className="text-[11px] font-black text-red-700 uppercase flex items-center gap-2">
+                        ⏱️ THỜI GIAN DỪNG & CHẠY LẠI
+                    </h3>
+                    
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap w-20">Bắt đầu dừng</label>
+                            <input 
+                                type="datetime-local" 
+                                className="flex-1 border border-red-200 rounded p-1 text-[11px] uppercase focus:ring-1 focus:ring-red-500 outline-none bg-white font-bold text-slate-600"
+                                value={shutdownDetail.start} 
+                                onChange={e => setShutdownDetail({...shutdownDetail, start: e.target.value})} 
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap w-20">Chạy lại máy</label>
+                            <input 
+                                type="datetime-local" 
+                                className="flex-1 border border-red-200 rounded p-1 text-[11px] uppercase focus:ring-1 focus:ring-red-500 outline-none bg-white font-bold text-slate-600"
+                                value={shutdownDetail.end} 
+                                onChange={e => setShutdownDetail({...shutdownDetail, end: e.target.value})} 
+                            />
+                        </div>
+                    </div>
 
-                                        {/* KHỐI HIỂN THỊ TỔNG GIỜ (TỰ ĐỘNG TÍNH - MÀU ĐỎ) */}
-                                        <div className="flex justify-between items-center bg-red-50 p-2 rounded border border-red-100 mt-2">
-                                            <span className="text-xs font-bold text-red-600 uppercase">Tổng thời gian dừng:</span>
-                                            <span className="text-sm font-black text-red-800 font-mono">
-                                                {shutdownDetail.start 
-                                                    ? calculateHoursDiff(shutdownDetail.start, shutdownDetail.end).toFixed(2) 
-                                                    : 0} 
-                                                <span className="text-xs font-normal text-red-600 ml-1">giờ</span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                        
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Nguyên nhân</label>
-                                            <textarea placeholder="Nguyên nhân" className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none h-16 resize-none" value={shutdownDetail.cause} onChange={e=>setShutdownDetail({...shutdownDetail, cause: e.target.value})}/>
-                                        </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-red-100">
+                        <span className="text-[11px] font-bold text-red-600">TỔNG GIỜ DỪNG:</span>
+                        <div className="flex items-center gap-1 bg-white px-3 py-1 rounded border border-red-200 shadow-sm font-mono font-black text-red-800">
+                            {calculateHoursDiff(shutdownDetail.start, shutdownDetail.end).toFixed(2)}
+                            <span className="text-[10px] font-bold text-red-400 ml-1 uppercase">Giờ</span>
+                        </div>
+                    </div>
+                </div>
 
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Ghi chú chi tiết</label>
-                                            <textarea placeholder="Thông tin khác (tùy chọn)" className="w-full h-16 border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none overflow-y-auto" value={shutdownDetail.info} onChange={e => setShutdownDetail({...shutdownDetail, info: e.target.value})} />
-                                        </div>
+                {/* 3. Nguyên nhân & Ghi chú */}
+                <div className="space-y-3 pt-2 border-t border-dashed border-slate-200">
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase">Nguyên nhân chi tiết</label>
+                        <textarea 
+                            className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none shadow-sm h-16 resize-none bg-white"
+                            placeholder="Nhập nguyên nhân gây sự cố..."
+                            value={shutdownDetail.cause || ''}
+                            onChange={e => setShutdownDetail({...shutdownDetail, cause: e.target.value})}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase">Ghi chú bổ sung</label>
+                        <textarea 
+                            className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none shadow-sm h-16 resize-none bg-white"
+                            placeholder="Thông tin khác..."
+                            value={shutdownDetail.info || ''}
+                            onChange={e => setShutdownDetail({...shutdownDetail, info: e.target.value})}
+                        />
+                    </div>
+                </div>
 
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Tình trạng khắc phục</label>
-                                            <div className="flex flex-wrap gap-2 pt-1">
-                                                {SHUTDOWN_STATUS_OPTIONS.map(status => (
-                                                    <label key={status} className="flex items-center gap-1 text-xs cursor-pointer bg-white px-2 py-1 rounded border hover:bg-gray-50">
-                                                        <input type="radio" name="shutdownDetailStatus" checked={shutdownDetail.status === status} onChange={() => { setShutdownDetail({...shutdownDetail, status: status}); }} className="text-blue-600 focus:ring-blue-500" />
-                                                        {status}
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center pt-2">
-                                            <button 
-                                                onClick={deleteShutdownFromDetail} // <-- Đảm bảo gọi đúng tên hàm vừa dán ở Bước 1
-                                                className="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors shadow-sm"
-                                            >
-                                                Xóa sự cố
-                                            </button>
-                                            <div className="flex gap-3">
-                                                <button onClick={closeShutdownDetail} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium">Hủy bỏ</button>
-                                                <button onClick={saveShutdownDetail} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium shadow-md transition-colors">Lưu</button>
-                                            </div>
-                                        </div>
-                                    </div>
+                {/* 4. Trạng thái Sự cố (TỰ ĐỘNG) */}
+                <div className="mt-4 p-3 bg-red-50 rounded-xl border border-red-100">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <label className="block text-[11px] font-bold text-red-700 uppercase leading-tight">Tình trạng khắc phục:</label>
+                            <p className="text-[10px] text-red-400 italic">Hệ thống tự tính theo thời gian chạy máy</p>
+                        </div>
+                        {(() => {
+                            const currentStatus = autoDetermineStatus(shutdownDetail.start, shutdownDetail.end, true);
+                            const isProcessing = currentStatus === "Đang xử lý";
+                            return (
+                                <div className={`px-4 py-1.5 rounded-full border text-xs font-black shadow-sm flex items-center gap-2 ${
+                                    isProcessing ? "bg-red-100 border-red-300 text-red-700 animate-pulse" : "bg-emerald-100 border-emerald-300 text-emerald-700"
+                                }`}>
+                                    <span className={`w-2 h-2 rounded-full ${isProcessing ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+                                    {currentStatus.toUpperCase()}
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
+                    </div>
+                </div>
 
-                        {/* EVENT DETAIL MODAL */}
-                        {eventDetail && (
-                             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10001] p-4 backdrop-blur-sm" style={{zIndex: 10000}}>
-                                <div className="bg-white rounded-xl w-full max-w-md shadow-2xl flex flex-col transform transition-all scale-100">
-                                    <div className="p-5 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
-                                        <h2 className="text-lg font-bold text-gray-800">Chi tiết sự kiện</h2>
-                                        <button onClick={closeEventDetail} className="text-gray-400 hover:text-red-500 transition-colors">✕</button>
-                                    </div>
-                                    <div className="p-6 space-y-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Nội dung sự kiện</label>
-                                            <input placeholder="Nội dung sự kiện" className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={eventDetail.name} onChange={e => setEventDetail({...eventDetail, name: e.target.value})} />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Đơn vị thực hiện</label>
-                                                <input list="performingUnitsDetail" placeholder="Chọn/Nhập..." className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={eventDetail.performingUnit || ''} onChange={e => setEventDetail({...eventDetail, performingUnit: e.target.value})} />
-                                                <datalist id="performingUnitsDetail">{PERFORMING_UNITS.map(unit => <option key={unit} value={unit} />)}</datalist>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">Giàn liên quan</label>
-                                                <input list="relatedPlatformsDetail" placeholder="Chọn/Nhập thêm..." className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={eventDetail.relatedPlatforms || ''} onChange={e => setEventDetail({...eventDetail, relatedPlatforms: e.target.value})} />
-                                                <datalist id="relatedPlatformsDetail">{RELATED_PLATFORMS.map(platform => <option key={platform} value={platform} />)}</datalist>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Thiết bị liên quan (nếu có)</label>
-                                            <input list="equipmentDetail" placeholder="Thiết bị..." className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={eventDetail.equipment || ''} onChange={e => setEventDetail({...eventDetail, equipment: e.target.value})} />
-                                            <datalist id="equipmentDetail">{MAINTENANCE_EQUIPMENT.map(e=><option key={e} value={e}/>)}</datalist>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Loại sự kiện</label>
-                                            <select className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={eventDetail.eventType || 'Khác'} onChange={e => setEventDetail({...eventDetail, eventType: e.target.value})}>
-                                                {EVENT_TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                            </select>
-                                        </div>
-                                    
-									{/* --- THỜI GIAN SỰ KIỆN CÓ Tính tổng thời gian (Màu Vàng) --- */}
-                                    <div>
-										<label className="block text-xs font-medium text-gray-500 mb-1">Thời gian thực hiện</label>
-										<div className="grid grid-cols-2 gap-3">
-											<div>
-												<label className="block text-[10px] text-gray-400 mb-0.5">Bắt đầu</label>
-												<input 
-													type="datetime-local" 
-													className="w-full border border-gray-300 rounded p-2 text-sm" 
-													value={eventDetail.startDate} 
-													onChange={e => setEventDetail({...eventDetail, startDate: e.target.value})} 
-												/>
+            </div> 
+
+            {/* Footer */}
+            <div className="p-4 border-t bg-slate-50 flex justify-between items-center">
+                {shutdownDetail.id ? (
+                    <button onClick={deleteShutdownFromDetail} className="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 transition-colors shadow-sm">
+                        🗑️ XÓA SỰ CỐ
+                    </button>
+                ) : <div />}
+                
+                <div className="flex gap-3">
+                    <button onClick={closeShutdownDetail} className="px-4 py-2 text-slate-600 font-bold text-xs uppercase hover:bg-gray-200 rounded-lg">Hủy</button>
+                    <button onClick={saveShutdownDetail} className="px-6 py-2 bg-red-600 text-white rounded-lg font-black text-xs uppercase shadow-md hover:bg-red-700 transition-colors">
+                        {!shutdownDetail.id ? "THÊM MỚI" : "LƯU CẬP NHẬT"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
+
+                        {/* BẢNG CHI TIẾT CÁC SỰ KIỆN KHÁC MODAL (ĐỒNG BỘ 100% VỚI BẢO DƯỠNG) */}
+						{eventDetail && (
+							<div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10001] p-4 backdrop-blur-sm">
+								<div className="bg-white rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+									
+									{/* Header chuyên nghiệp */}
+									<div className="p-4 border-b flex justify-between items-center bg-slate-50">
+										<div>
+											<h2 className="text-lg font-bold text-slate-800">
+												{!eventDetail.id ? "Thêm mới Sự kiện" : "Chi tiết Sự kiện"}
+											</h2>
+											<p className="text-[10px] text-slate-500 uppercase font-semibold">
+												CẬP NHẬT KẾ HOẠCH & THỰC TẾ SỰ KIỆN
+											</p>
+										</div>
+										<button onClick={closeEventDetail} className="text-gray-400 hover:text-red-500 bg-white w-8 h-8 rounded-full shadow-sm border flex items-center justify-center transition-colors">✕</button>
+									</div>
+
+									{/* 👇 VÙNG CUỘN NỘI DUNG CHÍNH 👇 */}
+									<div className="p-5 space-y-4 overflow-y-auto custom-scrollbar">
+										
+										{/* 1. Thông tin chung */}
+										<div className="space-y-3">
+											<label className="block text-[11px] font-bold text-slate-500 uppercase mb-[-8px]">Nội dung sự kiện</label>
+											<input 
+												placeholder="Nhập nội dung hoặc tên sự kiện..." 
+												className="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-bold focus:ring-2 focus:ring-purple-500 outline-none shadow-sm" 
+												value={eventDetail.name} 
+												onChange={e => setEventDetail({...eventDetail, name: e.target.value})} 
+											/>
+											
+											<div className="grid grid-cols-2 gap-3">
+												<div>
+													<label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">Giàn liên quan</label>
+													<input list="rpDetail" className="w-full border border-slate-300 rounded-lg p-2 text-sm" value={eventDetail.relatedPlatforms || ''} onChange={e => setEventDetail({...eventDetail, relatedPlatforms: e.target.value})} placeholder="Chọn/Nhập..." />
+													<datalist id="rpDetail">{RELATED_PLATFORMS.map(p => <option key={p} value={p} />)}</datalist>
+												</div>
+												<div>
+													<label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">Thiết bị (Nếu có)</label>
+													<input list="eqDetail" className="w-full border border-slate-300 rounded-lg p-2 text-sm font-bold text-purple-700" value={eventDetail.equipment || ''} onChange={e => setEventDetail({...eventDetail, equipment: e.target.value})} placeholder="Chọn/Nhập..." />
+													<datalist id="eqDetail">{MAINTENANCE_EQUIPMENT.map(e=><option key={e} value={e}/>)}</datalist>
+												</div>
 											</div>
+
 											<div>
-												<label className="block text-[10px] text-gray-400 mb-0.5">Kết thúc</label>
-												<input 
-													type="datetime-local" 
-													className="w-full border border-gray-300 rounded p-2 text-sm" 
-													value={eventDetail.endDate} 
-													onChange={e => setEventDetail({...eventDetail, endDate: e.target.value})} 
-												/>
+												<label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">Loại sự kiện</label>
+												<select className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none bg-white font-bold" value={eventDetail.eventType || 'Khác'} onChange={e => setEventDetail({...eventDetail, eventType: e.target.value})}>
+													{EVENT_TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+												</select>
 											</div>
 										</div>
 
-										{/* KHỐI HIỂN THỊ TỔNG GIỜ (TỰ ĐỘNG TÍNH) */}
-										<div className="flex justify-between items-center bg-yellow-50 p-2 rounded border border-yellow-200 mt-2">
-											<span className="text-xs font-bold text-yellow-700 uppercase">Tổng thời gian:</span>
-											<span className="text-sm font-black text-yellow-800 font-mono">
-												{eventDetail.startDate && eventDetail.endDate 
-													? calculateHoursDiff(eventDetail.startDate, eventDetail.endDate).toFixed(2) 
-													: 0} 
-												<span className="text-xs font-normal text-yellow-700 ml-1">giờ</span>
-											</span>
+										{/* 2. Phần Dự kiến (Logic: Mặc định 5:00 sáng + Tự tính ngày kết thúc) */}
+										<div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 space-y-2">
+											<h3 className="text-[11px] font-black text-blue-700 uppercase flex items-center gap-2">🗓️ THỜI GIAN DỰ KIẾN (LÊN KẾ HOẠCH)</h3>
+											
+											<div className="space-y-2">
+												{/* Hàng 1: Bắt đầu dự kiến */}
+												<div className="flex items-center gap-2">
+													<label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap w-20">Bắt đầu</label>
+													<input 
+														type="datetime-local" 
+														className="flex-1 border border-blue-200 rounded p-1 text-[11px] uppercase focus:ring-1 focus:ring-blue-500 outline-none bg-white font-bold text-slate-600"
+														value={eventDetail.plannedStart || ''} 
+														onChange={e => {
+															let newStart = e.target.value;
+															if (newStart) {
+																const newDatePart = newStart.split('T')[0];
+																const oldDatePart = eventDetail.plannedStart ? eventDetail.plannedStart.split('T')[0] : '';
+																if (newDatePart !== oldDatePart) newStart = `${newDatePart}T05:00`;
+															}
+
+															let newEnd = eventDetail.plannedEnd || '';
+															if (eventDetail.plannedHours && parseFloat(eventDetail.plannedHours) > 0 && newStart) {
+																const startDate = new Date(newStart);
+																const endDate = new Date(startDate.getTime() + (parseFloat(eventDetail.plannedHours) * 3600000));
+																const offset = endDate.getTimezoneOffset() * 60000;
+																newEnd = new Date(endDate.getTime() - offset).toISOString().slice(0, 16);
+															}
+															setEventDetail({ ...eventDetail, plannedStart: newStart, plannedEnd: newEnd });
+														}} 
+													/>
+												</div>
+
+												{/* Hàng 2: Kết thúc dự kiến */}
+												<div className="flex items-center gap-2">
+													<label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap w-20">Kết thúc</label>
+													<input 
+														type="datetime-local" 
+														className="flex-1 border border-blue-200 rounded p-1 text-[11px] uppercase focus:ring-1 focus:ring-blue-500 outline-none bg-white font-bold text-slate-600"
+														value={eventDetail.plannedEnd || ''} 
+														onChange={e => {
+															const newEnd = e.target.value;
+															const hours = autoCalculateHours(eventDetail.plannedStart, newEnd);
+															setEventDetail({ ...eventDetail, plannedEnd: newEnd, plannedHours: hours });
+														}} 
+													/>
+												</div>
+											</div>
+
+											{/* Định mức giờ dự kiến */}
+											<div className="flex justify-between items-center pt-2 border-t border-blue-100">
+												<span className="text-[11px] font-bold text-blue-600 uppercase">Định mức thời gian:</span>
+												<div className="flex items-center gap-1">
+													<input 
+														type="number" step="0.5"
+														className="w-20 border border-blue-300 rounded p-1 text-xs text-center font-bold focus:ring-1 focus:ring-blue-500 outline-none" 
+														value={eventDetail.plannedHours || ''} 
+														onChange={e => {
+															const newHours = e.target.value;
+															let newEnd = eventDetail.plannedEnd;
+															if (eventDetail.plannedStart && newHours && parseFloat(newHours) > 0) {
+																const startDate = new Date(eventDetail.plannedStart);
+																const endDate = new Date(startDate.getTime() + (parseFloat(newHours) * 3600000));
+																const offset = endDate.getTimezoneOffset() * 60000;
+																newEnd = new Date(endDate.getTime() - offset).toISOString().slice(0, 16);
+															}
+															setEventDetail({ ...eventDetail, plannedHours: newHours, plannedEnd: newEnd });
+														}} 
+													/>
+													<span className="text-[11px] font-bold text-blue-400">GIỜ</span>
+												</div>
+											</div>
+										</div>
+
+										{/* 3. Khối Thực tế (Màu Tím nhạt) */}
+										<div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100 space-y-2">
+											<h3 className="text-[11px] font-black text-purple-700 uppercase flex items-center gap-2">⏱️ THỜI GIAN THỰC HIỆN (GHI NHẬN)</h3>
+											
+											<div className="space-y-2">
+												<div className="flex items-center gap-2">
+													<label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap w-20">Bắt đầu</label>
+													<input 
+														type="datetime-local" 
+														className="flex-1 border border-purple-200 rounded p-1 text-[11px] uppercase focus:ring-1 focus:ring-purple-500 outline-none bg-white font-bold text-slate-600"
+														value={eventDetail.startDate || ''} 
+														onChange={e => {
+															const newStart = e.target.value;
+															const hours = autoCalculateHours(newStart, eventDetail.endDate);
+															setEventDetail({ ...eventDetail, startDate: newStart, actualHours: hours });
+														}} 
+													/>
+												</div>
+												<div className="flex items-center gap-2">
+													<label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap w-20">Kết thúc</label>
+													<input 
+														type="datetime-local" 
+														className="flex-1 border border-purple-200 rounded p-1 text-[11px] uppercase focus:ring-1 focus:ring-purple-500 outline-none bg-white font-bold text-slate-600"
+														value={eventDetail.endDate || ''} 
+														onChange={e => {
+															const newEnd = e.target.value;
+															const hours = autoCalculateHours(eventDetail.startDate, newEnd);
+															setEventDetail({ ...eventDetail, endDate: newEnd, actualHours: hours });
+														}} 
+													/>
+												</div>
+											</div>
+
+											{/* Tổng thời gian thực tế */}
+											<div className="flex justify-between items-center pt-2 border-t border-purple-100">
+												<span className="text-[11px] font-bold text-purple-600 uppercase">Tổng thời gian thực tế:</span>
+												<div className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-purple-200 shadow-sm">
+													<span className="text-sm font-black text-purple-800 font-mono">
+														{eventDetail.actualHours || '0'}
+													</span>
+													<span className="text-[10px] font-bold text-purple-400">GIỜ</span>
+												</div>
+											</div>
+										</div>
+
+										{/* 4. Ghi chú */}
+										<div className="space-y-2 pt-2 border-t border-dashed border-slate-200">
+											<label className="block text-[11px] font-bold text-slate-500 uppercase mb-[-4px]">Ghi chú / Thông tin khác</label>
+											<textarea 
+												className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none shadow-sm h-20 resize-none bg-white"
+												placeholder="Nhập ghi chú chi tiết..."
+												value={eventDetail.info || ''}
+												onChange={e => setEventDetail({...eventDetail, info: e.target.value})}
+											/>
+										</div>
+
+										{/* 5. Trạng thái Sự kiện (TỰ ĐỘNG) */}
+										<div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-100">
+											<div className="flex justify-between items-center">
+												<div>
+													<label className="block text-[11px] font-bold text-purple-700 uppercase leading-tight">Tiến độ thực hiện:</label>
+													<p className="text-[10px] text-purple-400 italic">Hệ thống tự tính theo thời gian ghi nhận</p>
+												</div>
+												
+												{(() => {
+													const currentStatus = autoDetermineStatus(eventDetail.startDate, eventDetail.endDate);
+													return (
+														<div className={`px-4 py-1.5 rounded-full border text-xs font-black shadow-sm flex items-center gap-2 ${getEventStatusColor(currentStatus)}`}>
+															<span className="w-2 h-2 rounded-full bg-current"></span>
+															{currentStatus.toUpperCase()}
+														</div>
+													);
+												})()}
+											</div>
 										</div>
 									</div>
-									
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Thông tin khác</label>
-                                            <textarea placeholder="Thông tin khác" className="w-full h-40 border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none overflow-y-auto" value={eventDetail.info} onChange={e => setEventDetail({...eventDetail, info: e.target.value})} />
-                                        </div>
+
+									{/* Footer */}
+									<div className="p-4 border-t bg-slate-50 flex justify-between items-center">
+										{eventDetail.id ? (
+											<button onClick={() => deleteEventFromDetail(eventDetail.id)} className="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 transition-colors shadow-sm">
+												🗑️ XÓA
+											</button>
+										) : <div />}
 										
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-500 mb-1">Tình trạng thực hiện</label>
-                                            <div className="flex flex-wrap gap-2 pt-1">
-                                                {EVENT_STATUS_OPTIONS.map(status => (
-                                                    <label key={status} className="flex items-center gap-1 text-xs cursor-pointer bg-white px-2 py-1 rounded border hover:bg-gray-50">
-                                                        <input type="radio" name="detailEventStatus" checked={eventDetail.status === status} onChange={() => { setEventDetail({...eventDetail, status: status}); if (status === 'Đang thực hiện') alert("Vui lòng cập nhật lại ngày bắt đầu nếu có thay đổi."); else if (status === 'Đã hoàn thành') alert("Vui lòng cập nhật lại ngày kết thúc nếu có thay đổi."); }} className="text-blue-600 focus:ring-blue-500" />
-                                                        {status}
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-										
-                                        <div className="flex justify-between items-center pt-2">
-                                            <button onClick={() => deleteEventFromDetail(eventDetail.id)} className="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">Xóa sự kiện</button>
-                                            <div className="flex gap-3">
-                                                <button onClick={closeEventDetail} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium">Hủy bỏ</button>
-                                                <button onClick={saveEventDetail} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium shadow-md transition-colors">Lưu</button>
-                                            </div>
-                                        </div>
-										
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+										<div className="flex gap-3">
+											<button onClick={closeEventDetail} className="px-4 py-2 text-slate-600 font-bold text-xs uppercase hover:bg-gray-200 rounded-lg transition-colors">Hủy</button>
+											<button onClick={saveEventDetail} className="px-6 py-2 bg-purple-600 text-white rounded-lg font-black text-xs uppercase shadow-md hover:bg-purple-700 transition-colors">
+												{!eventDetail.id ? "THÊM MỚI" : "LƯU CẬP NHẬT"}
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						)}
                     
                 {/* KHỐI GIAO DIỆN TAB 2 NHẬP LIỆU HÀNG NGÀY: */}
                 {activeView === 'DAILY_INPUT' && (
                     <div className="animate-in fade-in duration-300">
-                        {/* --- THANH CÔNG CỤ CHỌN NGÀY (GIAO DIỆN MỚI: NÚT TRÒN + STICKY/DÍNH) --- */}
-						{/* --- THANH CÔNG CỤ: CHỌN NGÀY & TÁC VỤ (ĐÃ CĂN ĐỀU NÚT) --- */}
-<div className="sticky top-12 z-40 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-md border border-gray-200 mb-6 flex flex-col xl:flex-row items-center justify-between gap-4 transition-all">
-    
-    {/* 1. KHU VỰC CHỌN NGÀY (BÊN TRÁI) */}
-    <div className="flex items-center gap-3 w-full xl:w-auto justify-center xl:justify-start">
-        <label className="font-bold text-gray-600 text-sm uppercase tracking-wide hidden sm:block">Ngày dữ liệu:</label>
-        
-        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-full border border-gray-200">
-            {/* Nút Lùi */}
-            <button 
-                onClick={() => changeDailyDate(-1)}
-                className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 shadow-sm border border-gray-100 transition-all active:scale-90"
-                title="Lùi 1 ngày"
-            >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
+                        {/* --- THANH CÔNG CỤ CHỌN NGÀY (GIAO DIỆN MỚI: NÚT TRÒN + STICKY/DÍNH) --- */}						
+						<div className="sticky top-12 z-40 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-md border border-gray-200 mb-6 flex flex-col xl:flex-row items-center justify-between gap-4 transition-all">
+							{/* 1. KHU VỰC CHỌN NGÀY (BÊN TRÁI) */}
+							<div className="flex items-center gap-3 w-full xl:w-auto justify-center xl:justify-start">
+								<label className="font-bold text-gray-600 text-sm uppercase tracking-wide hidden sm:block">Ngày dữ liệu:</label>
+								
+								<div className="flex items-center gap-2 bg-gray-50 p-1 rounded-full border border-gray-200">
+									{/* Nút Lùi */}
+									<button 
+										onClick={() => changeDailyDate(-1)}
+										className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 shadow-sm border border-gray-100 transition-all active:scale-90"
+										title="Lùi 1 ngày"
+									>
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+									</button>
 
-            {/* Ô Input Ngày */}
-            <input 
-                type="date" 
-                className="bg-transparent border-none outline-none font-mono font-bold text-blue-700 text-sm px-2 focus:ring-0 cursor-pointer"
-                value={dailyDate}
-                onChange={(e) => setDailyDate(e.target.value)}
-                onKeyDown={(e) => {
-                    if(e.key === 'ArrowLeft') changeDailyDate(-1);
-                    if(e.key === 'ArrowRight') changeDailyDate(1);
-                }}
-            />
+									{/* Ô Input Ngày */}
+									<input 
+										type="date" 
+										className="bg-transparent border-none outline-none font-mono font-bold text-blue-700 text-sm px-2 focus:ring-0 cursor-pointer"
+										value={dailyDate}
+										onChange={(e) => setDailyDate(e.target.value)}
+										onKeyDown={(e) => {
+											if(e.key === 'ArrowLeft') changeDailyDate(-1);
+											if(e.key === 'ArrowRight') changeDailyDate(1);
+										}}
+									/>
 
-            {/* Nút Tiến */}
-            <button 
-                onClick={() => changeDailyDate(1)}
-                className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 shadow-sm border border-gray-100 transition-all active:scale-90"
-                title="Tiến 1 ngày"
-            >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-        </div>
+									{/* Nút Tiến */}
+									<button 
+										onClick={() => changeDailyDate(1)}
+										className="w-8 h-8 flex items-center justify-center bg-white rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 shadow-sm border border-gray-100 transition-all active:scale-90"
+										title="Tiến 1 ngày"
+									>
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+									</button>
+								</div>
 
-        {/* Nút Hôm nay */}
-        <button 
-            onClick={() => {
-                const d = new Date();
-                const offset = d.getTimezoneOffset() * 60000;
-                setDailyDate(new Date(d.getTime() - offset).toISOString().slice(0, 10));
-            }}
-            className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors whitespace-nowrap"
-        >
-            Hôm nay
-        </button>
-    </div>
+								{/* Nút Hôm nay */}
+								<button 
+									onClick={() => {
+										const d = new Date();
+										const offset = d.getTimezoneOffset() * 60000;
+										setDailyDate(new Date(d.getTime() - offset).toISOString().slice(0, 10));
+									}}
+									className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors whitespace-nowrap"
+								>
+									Hôm nay
+								</button>
+							</div>
 
-    {/* 2. KHU VỰC 3 NÚT CHỨC NĂNG (BÊN PHẢI - GRID 3 CỘT ĐỀU NHAU) */}
-    <div className="grid grid-cols-3 gap-3 w-full xl:w-auto min-w-[500px]">
+							{/* 2. KHU VỰC 3 NÚT CHỨC NĂNG (BÊN PHẢI - GRID 3 CỘT ĐỀU NHAU) */}
+							<div className="grid grid-cols-3 gap-3 w-full xl:w-auto min-w-[500px]">
 
-        {/* Nút 1: Update Svodka */}
-        <button 
-            onClick={handlePushToSvodka}
-            disabled={isSyncing}
-            className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-bold text-sm text-white shadow-md transition-all w-full ${
-                isSyncing 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-orange-500 to-red-500 hover:shadow-lg hover:-translate-y-0.5'
-            }`}
-            title="Đẩy dữ liệu ngày đang chọn sang file DGCP Svodka (Sheet Detail)"
-        >
-            {isSyncing ? (
-                <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    <span className="truncate">Đang gửi...</span>
-                </>
-            ) : (
-                <span className="truncate">Update Svodka</span>
-            )}
-        </button>
+								{/* Nút 1: Update Svodka */}
+								<button 
+									onClick={handlePushToSvodka}
+									disabled={isSyncing}
+									className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-bold text-sm text-white shadow-md transition-all w-full ${
+										isSyncing 
+										? 'bg-gray-400 cursor-not-allowed' 
+										: 'bg-gradient-to-r from-orange-500 to-red-500 hover:shadow-lg hover:-translate-y-0.5'
+									}`}
+									title="Đẩy dữ liệu ngày đang chọn sang file DGCP Svodka (Sheet Detail)"
+								>
+									{isSyncing ? (
+										<>
+											<svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+											<span className="truncate">Đang gửi...</span>
+										</>
+									) : (
+										<span className="truncate">Update Svodka</span>
+									)}
+								</button>
 
-        {/* Nút 2: Xem Svodka */}
-        <button 
-            onClick={() => window.open("https://docs.google.com/spreadsheets/d/1EFsWL_NYhI6UenWAxz0pB1QDetCwMyroFRtsWV6CgXc/edit", "_blank")}
-            className="flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-bold text-sm text-green-700 bg-white border border-green-600 shadow-sm hover:bg-green-50 transition-all w-full"
-            title="Mở file Svodka trên Google Sheet"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><line x1="10" y1="9" x2="10" y2="9"></line></svg>
-            <span className="truncate">Xem Svodka</span>
-        </button>
+								{/* Nút 2: Xem Svodka */}
+								<button 
+									onClick={() => window.open("https://docs.google.com/spreadsheets/d/1EFsWL_NYhI6UenWAxz0pB1QDetCwMyroFRtsWV6CgXc/edit", "_blank")}
+									className="flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-bold text-sm text-green-700 bg-white border border-green-600 shadow-sm hover:bg-green-50 transition-all w-full"
+									title="Mở file Svodka trên Google Sheet"
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><line x1="10" y1="9" x2="10" y2="9"></line></svg>
+									<span className="truncate">Xem Svodka</span>
+								</button>
 
-        {/* Nút 3: Xóa Số Liệu */}
-        <button 
-            onClick={handleClearAllDailyData}
-            className="flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-bold text-sm text-red-700 bg-red-50 border border-red-200 shadow-sm hover:bg-red-100 hover:shadow-md transition-all w-full"
-            title="Chỉ xóa số liệu RP, RC, Điện, GTC... Giữ lại Báo cáo và Nhân sự"
-        >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            <span className="truncate">Xóa Số Liệu</span>
-        </button>
+								{/* Nút 3: Xóa Số Liệu */}
+								<button 
+									onClick={handleClearAllDailyData}
+									className="flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg font-bold text-sm text-red-700 bg-red-50 border border-red-200 shadow-sm hover:bg-red-100 hover:shadow-md transition-all w-full"
+									title="Chỉ xóa số liệu RP, RC, Điện, GTC... Giữ lại Báo cáo và Nhân sự"
+								>
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+									<span className="truncate">Xóa Số Liệu</span>
+								</button>
 
-    </div>
-</div>
+							</div>
+						</div>
 						
 								
-		{/* --- KHU VỰC CÔNG CỤ IMPORT (2 NÚT NẰM NGANG) --- */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
-            <h3 className="text-sm font-bold text-gray-700 mb-2">📥 CÔNG CỤ NHẬP LIỆU (IMPORT)</h3>
-            
-            {/* Sử dụng Flexbox để dàn ngang */}
-            <div className="flex gap-4">
-                
-                {/* --- NÚT 1: UPLOAD CÁC GIÀN HÀNG LOẠT(50%) --- */}
-                {/* Dùng w-1/2 để chiếm 50% chiều rộng */}
-                <div className="w-1/2 bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col items-center text-center justify-center relative hover:bg-blue-100 transition-colors cursor-pointer group">
-                    <div className="p-2 bg-blue-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                        {/* Icon Upload File */}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-blue-800 text-sm"> Upload các giàn (Ngày)</h4>
-                        <p className="text-[10px] text-blue-600 mt-0.5">Nạp báo cáo cho 1 ngày cụ thể</p>
-                    </div>
-                    {/* Input của UPLOAD CÁC GIÀN HÀNG LOẠT */}
-                    <input 
-                        type="file" 
-						multiple
-                        accept=".xlsx, .xls"
-                        onChange={withXLSX(handleBatchUpload)}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        title="Chọn file báo cáo ngày"
-                    />
-                </div>
+						{/* --- KHU VỰC CÔNG CỤ IMPORT (2 NÚT NẰM NGANG) --- */}
+						<div className="mt-4 pt-4 border-t border-gray-100">
+							<h3 className="text-sm font-bold text-gray-700 mb-2">📥 CÔNG CỤ NHẬP LIỆU (IMPORT)</h3>
+							
+							{/* Sử dụng Flexbox để dàn ngang */}
+							<div className="flex gap-4">
+								
+								{/* --- NÚT 1: UPLOAD CÁC GIÀN HÀNG LOẠT(50%) --- */}
+								{/* Dùng w-1/2 để chiếm 50% chiều rộng */}
+								<div className="w-1/2 bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col items-center text-center justify-center relative hover:bg-blue-100 transition-colors cursor-pointer group">
+									<div className="p-2 bg-blue-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
+										{/* Icon Upload File */}
+										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+									</div>
+									<div>
+										<h4 className="font-bold text-blue-800 text-sm"> Upload các giàn (Ngày)</h4>
+										<p className="text-[10px] text-blue-600 mt-0.5">Nạp báo cáo cho 1 ngày cụ thể</p>
+									</div>
+									{/* Input của UPLOAD CÁC GIÀN HÀNG LOẠT */}
+									<input 
+										type="file" 
+										multiple
+										accept=".xlsx, .xls"
+										onChange={withXLSX(handleBatchUpload)}
+										className="absolute inset-0 opacity-0 cursor-pointer"
+										title="Chọn file báo cáo ngày"
+									/>
+								</div>
 
-                {/* --- NÚT 2: IMPORT FILE SVODKA EXCEL (50%) --- */}
-                {/* Dùng w-1/2 để chiếm 50% chiều rộng */}
-                <div className="w-1/2 bg-gradient-to-br from-purple-500 to-indigo-600 p-4 rounded-xl flex flex-col items-center text-center justify-center relative hover:shadow-lg transition-all cursor-pointer group">
-                    <div className="p-2 bg-white/20 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                        {/* Icon Database */}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-white text-sm">Import Svodka Excel</h4>
-                        <p className="text-[10px] text-indigo-100 mt-0.5">Nạp dữ liệu (Detail/HR/Others...)</p>
-                    </div>
-                    {/* Input của Import file Svodka Excel */}
-                    <input 
-                        type="file" 
-                        accept=".xlsx, .xls"
-                        onChange={withXLSX(handleImportFullHistory)}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        title="Chọn file Svodka tổng hợp"
-                    />
-                </div>
+								{/* --- NÚT 2: IMPORT FILE SVODKA EXCEL (50%) --- */}
+								{/* Dùng w-1/2 để chiếm 50% chiều rộng */}
+								<div className="w-1/2 bg-gradient-to-br from-purple-500 to-indigo-600 p-4 rounded-xl flex flex-col items-center text-center justify-center relative hover:shadow-lg transition-all cursor-pointer group">
+									<div className="p-2 bg-white/20 rounded-full mb-2 group-hover:scale-110 transition-transform">
+										{/* Icon Database */}
+										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+									</div>
+									<div>
+										<h4 className="font-bold text-white text-sm">Import Svodka Excel</h4>
+										<p className="text-[10px] text-indigo-100 mt-0.5">Nạp dữ liệu (Detail/HR/Others...)</p>
+									</div>
+									{/* Input của Import file Svodka Excel */}
+									<input 
+										type="file" 
+										accept=".xlsx, .xls"
+										onChange={withXLSX(handleImportFullHistory)}
+										className="absolute inset-0 opacity-0 cursor-pointer"
+										title="Chọn file Svodka tổng hợp"
+									/>
+								</div>
 
-            </div>
-        </div>
+							</div>
+						</div>
 
 						{/* --- KHU VỰC CÁC THẺ THÔNG SỐ --- */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -7477,11 +8104,7 @@
 										</tbody>
                                     </table>
                                 </div>
-                                <div className="p-2 border-t bg-gray-50 flex justify-center">
-                                    <span className="text-xs text-gray-400 italic">
-                                        Tự động nhận diện từ khóa
-                                    </span>
-                                </div>
+                                
                             </div>
   							
                         {/* --- FORM RP2 (XANH DƯƠNG - CÓ CỘT ĐƠN VỊ) --- */}
